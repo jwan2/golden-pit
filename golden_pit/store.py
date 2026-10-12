@@ -38,7 +38,10 @@ class Store:
     def save_scan(self, scan: dict) -> None:
         with self._lock:
             self._atomic_write(self.latest_path, scan)
-            self._atomic_write(self.history / f"scan_{scan['scan_id']}.json", scan)
+            # 历史存档去掉图表数据（S&P 500 一次约 1MB 图表），只保留判定与指标
+            slim = {**scan, "results": [{k: v for k, v in r.items() if k != "chart"} if isinstance(r, dict) else r
+                                        for r in scan.get("results", [])]}
+            self._atomic_write(self.history / f"scan_{scan['scan_id']}.json", slim)
             for old in sorted(self.history.glob("scan_*.json"))[:-HISTORY_KEEP]:
                 old.unlink(missing_ok=True)
 

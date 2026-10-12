@@ -159,3 +159,37 @@ def test_stats_ignore_entries_younger_than_a_week(tmp_path):
     data["entries"][0].update(last_price=11.0, last_at="2026-01-20T00:00:00+00:00")
     st = Tracker.report(data)["summary"]["return_since"]
     assert st["n"] == 1 and st["mean"] == 10.0 and st["win_rate"] == 100.0
+
+
+# ---------------- S&P 500 候选池 / 时限 / 历史瘦身
+def test_sp500_bundled_list():
+    from golden_pit import universe
+    tickers, note = universe.sp500()
+    assert len(tickers) >= 400 and "BRK-B" in tickers and "AAPL" in tickers
+    assert len(set(tickers)) == len(tickers)
+    from golden_pit.i18n import render
+    assert "S&P 500" in render(note, "en")
+
+
+def test_sp500_data_dir_override(tmp_path):
+    import json as _j
+    from golden_pit import universe
+    (tmp_path / universe.SP500_FILE).write_text(_j.dumps({"as_of": "2030-01-01", "tickers": [{"t": "AAA"}, {"t": "bad!"}]}))
+    tickers, _ = universe.sp500(tmp_path)
+    assert tickers == ["AAA"]
+
+
+def test_deadline_scales_with_universe():
+    from golden_pit.scanner import SCAN_DEADLINE_SECONDS, deadline_for
+    assert deadline_for(10) == SCAN_DEADLINE_SECONDS and deadline_for(503) > SCAN_DEADLINE_SECONDS
+
+
+def test_history_archive_has_no_charts(tmp_path):
+    import json as _j
+    from golden_pit.store import Store
+    st = Store(tmp_path)
+    st.save_scan({"scan_id": "20260101_000000", "finished_at": "x",
+                  "results": [{"ticker": "A", "chart": {"closes": [1, 2]}, "verdict": {"tier": "fail"}}]})
+    assert "chart" in st.latest()["results"][0]
+    hist = _j.loads((tmp_path / "history" / "scan_20260101_000000.json").read_text())
+    assert "chart" not in hist["results"][0] and hist["results"][0]["ticker"] == "A"

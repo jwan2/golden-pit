@@ -31,7 +31,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
     engine = engine or Engine(settings)
     store, scanner, ai = engine.store, engine.scanner, engine.ai
     th, sc = engine.thresholds, engine.screener
-    scheduler = scheduler or Scheduler(settings.slots, lambda: scanner.start("live", trigger="scheduled"))
+    scheduler = scheduler or Scheduler(settings.slots, lambda: scanner.start(settings.scheduled_mode, trigger="scheduled"))
     if settings.scheduler_enabled:
         scheduler.start()
 
@@ -95,7 +95,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
             version=__version__, schema_version=SCHEMA_VERSION, lang=lang(), langs=list(LANGS),
             thresholds=th.to_dict(), screener=sc.to_dict(), tiers=TIERS, tier_order=TIER_ORDER,
             auth_required=bool(settings.admin_token), local_only=not settings.admin_token,
-            scheduler=scheduler.info(), ai=ai.cfg.public(),
+            scheduler={**scheduler.info(), "mode": settings.scheduled_mode}, ai=ai.cfg.public(),
         )
 
     @app.get("/api/scan/latest")
@@ -151,7 +151,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
     def start_scan():
         body = request.get_json(silent=True) or {}
         mode = body.get("mode", "live")
-        if mode not in ("live", "curated", "custom"):
+        if mode not in universe.MODES:
             return err(M("e.mode"), 400)
         tickers = universe.parse_tickers(body.get("tickers", [])) if mode == "custom" else []
         if mode == "custom" and not tickers:

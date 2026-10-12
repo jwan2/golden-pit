@@ -21,6 +21,11 @@ from .track import Tracker
 SCAN_DEADLINE_SECONDS = 15 * 60
 
 
+def deadline_for(n: int) -> int:
+    """扫描总时限：至少 15 分钟；大股票池（如 S&P 500 首次抓取）按每只 2.5 秒放宽。"""
+    return max(SCAN_DEADLINE_SECONDS, int(n * 2.5))
+
+
 def summarize(results: list[dict]) -> dict:
     counts = {t: 0 for t in TIER_ORDER}
     for r in results:
@@ -99,16 +104,19 @@ class Scanner:
                 raise MsgError(M("u.no_tickers"))
         elif mode == "curated":
             tickers, note = universe.curated()
+        elif mode == "sp500":
+            tickers, note = universe.sp500(self.store.dir)
         else:
             tickers, note = universe.live_screen(self.screener)
         self._set(stage="analyzing", total=len(tickers), done=0, message=M("s.analyzing", n=len(tickers)))
 
         results: dict[str, dict] = {}
+        limit = deadline_for(len(tickers))
         pool = ThreadPoolExecutor(max_workers=self.workers)
         try:
             futures = {pool.submit(analyze_ticker, t, self.th, self.fetch): t for t in tickers}
             try:
-                for fut in as_completed(futures, timeout=SCAN_DEADLINE_SECONDS):
+                for fut in as_completed(futures, timeout=limit):
                     t = futures[fut]
                     results[t] = fut.result()
                     self._set(done=len(results), current=t)
@@ -117,7 +125,7 @@ class Scanner:
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
         for t in tickers:  # 超时未完成的如实标记，不丢弃
-            results.setdefault(t, error_result(t, M("err.timeout", t=t, m=SCAN_DEADLINE_SECONDS // 60)))
+            results.setdefault(t, error_result(t, M("err.timeout", t=t, m=limit // 60)))
 
         ordered = sorted(results.values(), key=lambda r: r["verdict"]["sort_key"] + [r["ticker"]])
         finished = datetime.now(timezone.utc)

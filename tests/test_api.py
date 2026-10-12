@@ -271,3 +271,19 @@ def test_mcp_tools_register_with_sdk(tmp_path):
         server.tool()(fn)
     names = {t.name for t in asyncio.run(server.list_tools())}
     assert {"scan_stocks", "analyze_stock"} <= names
+
+
+def test_sp500_mode_end_to_end(tmp_path, monkeypatch):
+    from golden_pit import universe
+    monkeypatch.setattr(universe, "sp500", lambda data_dir=None: (["AAA", "FLAT"], {"$m": "u.sp500", "p": {"n": 2, "date": "x"}}))
+    s, engine = make_engine(tmp_path)
+    app = create_app(s, engine=engine)
+    c = app.test_client()
+    assert c.post("/api/scan", json={"mode": "sp500"}).status_code == 202
+    for _ in range(200):
+        if not engine.scanner.status()["running"]:
+            break
+        import time; time.sleep(0.02)
+    scan = c.get("/api/scan/latest?lang=en").get_json()["scan"]
+    assert scan["universe"]["mode"] == "sp500" and "S&P 500" in scan["universe"]["note"]
+    assert c.get("/api/config").get_json()["scheduler"]["mode"] == "live"

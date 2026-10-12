@@ -29,11 +29,12 @@ def build_tools(engine: Engine) -> dict:
 
     def scan_stocks(mode: str = "curated", tickers: Optional[list[str]] = None) -> dict:
         """Run a scan and save it. mode: "curated" (82 high-moat names), "live" (Yahoo screener of
-        beaten-down US stocks, may take a few minutes) or "custom" (pass tickers). Returns a ranked summary."""
+        beaten-down US stocks), "sp500" (all ~500 S&P 500 members — slow on the first run) or "custom"
+        (pass tickers). Returns a ranked summary."""
         if tickers:
             mode, tickers = "custom", universe.parse_tickers(tickers)
-        if mode not in ("live", "curated", "custom"):
-            return {"error": "mode must be live, curated or custom"}
+        if mode not in universe.MODES:
+            return {"error": "mode must be live, curated, sp500 or custom"}
         scan = engine.scanner.run_sync(mode, tickers or [], "mcp")
         return render({"finished_at": scan["finished_at"], "universe": scan["universe"]["note"],
                        "summary": {k: n for k, n in scan["summary"].items() if n},

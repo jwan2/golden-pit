@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> None:
 
     s = sub.add_parser("scan", help=tr("cli.h.scan", lang))
     s.add_argument("tickers", nargs="*", help=tr("cli.h.tickers", lang))
-    s.add_argument("--mode", choices=["live", "curated", "custom"])
+    s.add_argument("--mode", choices=["live", "curated", "sp500", "custom"])
     s.add_argument("--json", action="store_true", help=tr("cli.h.json", lang))
 
     s = sub.add_parser("analyze", help=tr("cli.h.analyze", lang))
@@ -105,6 +105,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--json", action="store_true", help=tr("cli.h.json", lang))
 
     sub.add_parser("track", help=tr("cli.h.track", lang))
+    s = sub.add_parser("universe", help=tr("cli.h.universe", lang))
+    s.add_argument("action", choices=["update"], help=tr("cli.h.universe_update", lang))
     sub.add_parser("mcp", help=tr("cli.h.mcp", lang))
 
     args = p.parse_args(argv)
@@ -123,6 +125,11 @@ def main(argv: list[str] | None = None) -> None:
     if args.cmd == "mcp":
         from .mcp_server import run
         run(settings)
+        return
+
+    if args.cmd == "universe":
+        n, as_of = universe.update_sp500(settings.data_dir)
+        print(tr("cli.universe_updated", lang, n=n, date=as_of, path=settings.data_dir / universe.SP500_FILE))
         return
 
     from .engine import Engine
