@@ -5,7 +5,7 @@
 
 [English](#english) · [中文](#中文)
 
-![Golden Pit table view](docs/screenshot-table-en.jpg)
+![Golden Pit table view](https://raw.githubusercontent.com/jwan2/golden-pit/main/docs/screenshot-table-en.jpg)
 
 ---
 
@@ -45,12 +45,12 @@ Free market data is messy. Golden Pit refuses to guess:
 - **Bilingual (English / 中文)** everywhere: web UI with a language toggle, CLI (`--lang`), API (`?lang=`), MCP, exports and AI notes.
 - **Disk cache.** Rescans take seconds instead of minutes.
 
-![Detail: price chart, timing and staged entry plan](docs/screenshot-detail-en.jpg)
+![Detail: price chart, timing and staged entry plan](https://raw.githubusercontent.com/jwan2/golden-pit/main/docs/screenshot-detail-en.jpg)
 
 ### Quick start
 
 ```bash
-pip install "golden-pit[mcp] @ git+https://github.com/jwan2/golden-pit.git"
+pip install "golden-pit[mcp]"
 golden-pit serve                 # → http://127.0.0.1:5000
 golden-pit scan MCD NKE BKNG     # terminal table
 golden-pit scan --mode sp500     # all ~500 S&P 500 members (first run is slow, then cached)
@@ -91,7 +91,7 @@ Use a single worker. Scan state and the scheduler live in-process.
 - The industry "moat" notes are human opinions at industry level. They are shown, never scored.
 - The track record needs months and dozens of samples before it means anything. The UI says so.
 
-**Not investment advice.** See [LICENSE](LICENSE) (MIT).
+**Not investment advice.** See [LICENSE](https://github.com/jwan2/golden-pit/blob/main/LICENSE) (MIT).
 
 ---
 
@@ -120,9 +120,9 @@ Use a single worker. Scan state and the scheduler live in-process.
 - **候选池**：Yahoo 实时筛选（跌深的股票）、S&P 500 全部成分股、82 只高壁垒核心池、你的自选，或任意代码
 - **网页**：可排序表格、结论理由、11 项指标逐条（值 / 要求 / 备注）、★ 自选、CSV / Markdown 导出、历史回看
 
-![表格视图](docs/screenshot-table.jpg)
+![表格视图](https://raw.githubusercontent.com/jwan2/golden-pit/main/docs/screenshot-table.jpg)
 
-![详情：走势图与分批计划](docs/screenshot-detail.jpg)
+![详情：走势图与分批计划](https://raw.githubusercontent.com/jwan2/golden-pit/main/docs/screenshot-detail.jpg)
 
 - **走势时机**：标出下跌中 / 筑底中 / 企稳反弹，并画一年价格图和分批价位线。回答"跌完了吗"，不改变判定
 - **买入计划器**：以 52 周高点为锚分三档；输入你的资金和单只上限，换算金额和股数。是纪律模板，不是建议
@@ -143,4 +143,4 @@ Use a single worker. Scan state and the scheduler live in-process.
 - 行业护城河观点是行业级的人工观点，只展示，不计分。
 - 战绩追踪需要数月时间和几十个样本才有意义。
 
-**不构成投资建议。** 许可证：[MIT](LICENSE)。
+**不构成投资建议。** 许可证：[MIT](https://github.com/jwan2/golden-pit/blob/main/LICENSE)。
