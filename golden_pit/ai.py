@@ -26,16 +26,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-PIT_TYPES = {"cyclical": "周期性低谷", "structural": "结构性衰退风险", "event": "事件/一次性冲击",
-             "sentiment": "情绪/估值杀跌", "unclear": "原因不明"}
-AGREE = {"agree": "同意量化结论", "partial": "部分同意", "disagree": "不同意量化结论"}
-CONFIDENCE = {"low": "低", "medium": "中", "high": "高"}
+from .i18n import M, MsgError, render
+
+PIT_TYPES = ("cyclical", "structural", "event", "sentiment", "unclear")
+AGREE = ("agree", "partial", "disagree")
+CONFIDENCE = ("low", "medium", "high")
 TICKER_RE = re.compile(r"^[A-Z]{1,5}(-[A-Z])?$")
 _CLI_SLOTS = threading.Semaphore(2)
 
 
-class AIError(Exception):
-    """AI 调用失败；消息可直接展示给用户。"""
+class AIError(MsgError):
+    """AI 调用失败；.msg 按语言展示给用户。"""
 
 
 @dataclass(frozen=True)
@@ -76,36 +77,37 @@ def _clean(s, n=120) -> str:
     return re.sub(r"[\x00-\x1f\x7f]", " ", str(s or ""))[:n].strip()
 
 
-def build_snapshot(result: dict) -> dict:
-    v = result["verdict"]
+def build_snapshot(result: dict, lang: str = "en") -> dict:
+    """给模型看的快照：先把所有 i18n 消息渲染成目标语言，再挑字段、清洗。"""
+    r = render(result, lang)
+    v = r["verdict"]
     return {
-        "ticker": result["ticker"], "name": _clean(result.get("name")),
-        "sector": _clean(result.get("sector")), "industry": _clean(result.get("industry")),
-        "price": result.get("price"), "currency": result.get("currency"),
-        "market_cap": result.get("market_cap"),
-        "drop_from_52w_high_pct": None if result.get("drop_from_high_pct") is None
-        else round(result["drop_from_high_pct"], 1),
-        "dividend_yield_pct": result.get("dividend_yield_pct"),
+        "ticker": r["ticker"], "name": _clean(r.get("name")),
+        "sector": _clean(r.get("sector")), "industry": _clean(r.get("industry")),
+        "price": r.get("price"), "currency": r.get("currency"),
+        "market_cap": r.get("market_cap"),
+        "drop_from_52w_high_pct": None if r.get("drop_from_high_pct") is None
+        else round(r["drop_from_high_pct"], 1),
+        "dividend_yield_pct": r.get("dividend_yield_pct"),
         "quant_verdict": {"tier": v["tier"], "label": v["label"],
                           "financial_pass": f"{v['fin_pass']}/{v['fin_total']}",
                           "management_pass": f"{v['mgmt_pass']}/3", "unknown_checks": v["unknown_count"]},
         "checks": [{"label": c["label"], "status": c["status"], "value": c["display"], "rule": c["rule"],
-                    "note": _clean(c.get("note"), 160)} for c in result["checks"]],
-        "data_warnings": [_clean(w, 200) for w in result.get("warnings", [])],
+                    "note": _clean(c.get("note"), 160)} for c in r["checks"]],
+        "data_warnings": [_clean(w, 200) for w in r.get("warnings", [])],
     }
 
 
-def snapshot_hash(snapshot: dict) -> str:
-    """只对"结构性结论"取哈希（档位 + 各项通过状态 + 警告）。
+def snapshot_hash(result: dict) -> str:
+    """只对"结构性结论"取哈希（档位 + 各项通过状态 + 警告），与语言无关。
     价格、市值、回撤每天都在变，如果算进去，研判会天天"过期"，失去意义。"""
-    core = {"ticker": snapshot["ticker"], "tier": snapshot["quant_verdict"]["tier"],
-            "checks": [(c["label"], c["status"]) for c in snapshot["checks"]],
-            "warnings": snapshot["data_warnings"]}
+    core = {"ticker": result["ticker"], "tier": result["verdict"]["tier"],
+            "checks": [(c["key"], c["status"]) for c in result.get("checks", [])],
+            "warnings": result.get("warnings", [])}
     return hashlib.sha256(json.dumps(core, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
 
-def build_prompt(snapshot: dict) -> str:
-    return f"""你是一位严谨的价值投资研究员，正在审阅一只被量化筛选器标记的美股。你的任务是写一份**研究观点**，帮助使用者判断这个"坑"是真黄金坑还是价值陷阱。
+PROMPT_ZH = """你是一位严谨的价值投资研究员，正在审阅一只被量化筛选器标记的美股。你的任务是写一份**研究观点**，帮助使用者判断这个"坑"是真黄金坑还是价值陷阱。
 
 【硬性规则】
 1. 只能使用下面"数据快照"里的数字；不得编造任何股价、财务数字、日期或新闻。快照里没有的，写"需自行核实"。
@@ -114,7 +116,7 @@ def build_prompt(snapshot: dict) -> str:
 4. 只返回一个 JSON 对象，不要任何其他文字或 markdown。
 
 【数据快照】
-{json.dumps(snapshot, ensure_ascii=False, indent=1)}
+{snapshot}
 
 【返回格式】（所有文本用中文，每条不超过 60 字）
 {{
@@ -129,6 +131,35 @@ def build_prompt(snapshot: dict) -> str:
   "confidence": "low|medium|high 之一"
 }}"""
 
+PROMPT_EN = """You are a rigorous value-investing analyst reviewing a US stock flagged by a quantitative screener. Write a **research note** that helps the user judge whether this "pit" is a genuine golden pit or a value trap.
+
+[Hard rules]
+1. Use only numbers from the data snapshot below. Never invent prices, financial figures, dates or news. If something isn't in the snapshot, write "verify independently".
+2. No buy/sell instructions, no price targets, no price predictions. Analyse only: why it's in a pit, the bear case, catalysts, and what to verify.
+3. If the snapshot has "unknown" checks (missing data), list them in data_gaps and lower your confidence accordingly.
+4. Return exactly one JSON object and nothing else — no prose, no markdown.
+
+[Data snapshot]
+{snapshot}
+
+[Return format] (all text in English, each item ≤ 30 words)
+{{
+  "pit_type": "one of cyclical|structural|event|sentiment|unclear",
+  "pit_reason": "why you classify the pit this way (≤ 40 words)",
+  "thesis": "bull case: why this may be a genuine golden pit (≤ 50 words)",
+  "bear_case": ["the 2-3 strongest bear arguments"],
+  "catalysts": ["1-3 catalysts that could close the value gap"],
+  "verify": ["2-4 things the user should verify independently"],
+  "data_gaps": ["missing data that matters; empty array if none"],
+  "agree_with_quant": "one of agree|partial|disagree",
+  "confidence": "one of low|medium|high"
+}}"""
+
+
+def build_prompt(snapshot: dict, lang: str = "en") -> str:
+    tpl = PROMPT_ZH if lang == "zh" else PROMPT_EN
+    return tpl.format(snapshot=json.dumps(snapshot, ensure_ascii=False, indent=1))
+
 
 # ------------------------------------------------------------ 解析与校验
 def _strs(v, max_items: int, max_len: int = 100) -> list[str]:
@@ -140,31 +171,31 @@ def _strs(v, max_items: int, max_len: int = 100) -> list[str]:
 def parse_and_validate(text: str) -> dict:
     m = re.search(r"\{[\s\S]*\}", text or "")
     if not m:
-        raise AIError("模型没有返回 JSON")
+        raise AIError(M("ai.e.no_json"))
     try:
         d = json.loads(m.group(0))
     except ValueError as e:
-        raise AIError(f"模型返回的 JSON 无法解析：{e}") from e
+        raise AIError(M("ai.e.bad_json", e=str(e))) from e
     if not isinstance(d, dict):
-        raise AIError("模型返回的不是 JSON 对象")
+        raise AIError(M("ai.e.not_object"))
     pit = d.get("pit_type")
     agree = d.get("agree_with_quant")
     conf = d.get("confidence")
     if pit not in PIT_TYPES or agree not in AGREE or conf not in CONFIDENCE:
-        raise AIError("模型返回的枚举字段不合法")
+        raise AIError(M("ai.e.bad_enum"))
     out = {
-        "pit_type": pit, "pit_type_label": PIT_TYPES[pit],
+        "pit_type": pit, "pit_type_label": M(f"ai.pit.{pit}"),
         "pit_reason": _clean(d.get("pit_reason"), 160),
         "thesis": _clean(d.get("thesis"), 200),
         "bear_case": _strs(d.get("bear_case"), 3),
         "catalysts": _strs(d.get("catalysts"), 3),
         "verify": _strs(d.get("verify"), 4),
         "data_gaps": _strs(d.get("data_gaps"), 4),
-        "agree_with_quant": agree, "agree_label": AGREE[agree],
-        "confidence": conf, "confidence_label": CONFIDENCE[conf],
+        "agree_with_quant": agree, "agree_label": M(f"ai.agree.{agree}"),
+        "confidence": conf, "confidence_label": M(f"ai.conf.{conf}"),
     }
     if not out["thesis"] or not out["bear_case"]:
-        raise AIError("模型返回的内容不完整（缺少多头逻辑或空头论点）")
+        raise AIError(M("ai.e.incomplete"))
     return out
 
 
@@ -177,7 +208,7 @@ def _cli_command() -> list[str]:
             return [node, str(cli_mjs)]
     exe = shutil.which("commandcode") or shutil.which("commandcode.cmd")
     if not exe:
-        raise AIError("没有找到 Command Code CLI（commandcode）。请先安装并登录，或改用 openai 提供商。")
+        raise AIError(M("ai.e.no_cli"))
     return [exe]
 
 
@@ -189,23 +220,23 @@ def call_cli(prompt: str, cfg: AIConfig) -> str:
             proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
                                   timeout=cfg.timeout, shell=False)
         except subprocess.TimeoutExpired as e:
-            raise AIError(f"模型响应超时（>{cfg.timeout}s）") from e
+            raise AIError(M("ai.e.timeout", s=cfg.timeout)) from e
         except OSError as e:
-            raise AIError(f"无法启动 Command Code CLI：{e}") from e
+            raise AIError(M("ai.e.cli_start", e=str(e))) from e
     if proc.returncode != 0:
         err = (proc.stderr or proc.stdout).strip()[:200]
         if "region" in err.lower() or "Geographic" in err:
-            raise AIError("该模型受地域限制，请换一个模型（GOLDEN_PIT_AI_MODEL）")
-        raise AIError(f"CLI 返回错误：{err}")
+            raise AIError(M("ai.e.region"))
+        raise AIError(M("ai.e.cli", e=err))
     return proc.stdout
 
 
 def call_openai(prompt: str, cfg: AIConfig) -> str:
     """任意 OpenAI 兼容接口（OpenAI、DeepSeek、Command Code provider 等）。仅用标准库。"""
     if not cfg.api_key:
-        raise AIError("未配置 GOLDEN_PIT_AI_KEY")
+        raise AIError(M("ai.e.no_key"))
     if not cfg.base_url.startswith("https://"):
-        raise AIError("GOLDEN_PIT_AI_BASE_URL 必须是 https:// 地址")
+        raise AIError(M("ai.e.https"))
     body = json.dumps({"model": cfg.model, "temperature": 0.2, "max_tokens": 900,
                        "messages": [{"role": "user", "content": prompt}]}).encode()
     req = urllib.request.Request(cfg.base_url + "/chat/completions", data=body, method="POST", headers={
@@ -215,9 +246,9 @@ def call_openai(prompt: str, cfg: AIConfig) -> str:
             data = json.loads(r.read().decode("utf-8"))
         return data["choices"][0]["message"]["content"]
     except urllib.error.HTTPError as e:
-        raise AIError(f"接口返回 HTTP {e.code}") from e   # 不回显响应体，避免泄漏
+        raise AIError(M("ai.e.http", code=e.code)) from e   # 不回显响应体，避免泄漏
     except (urllib.error.URLError, TimeoutError, KeyError, IndexError, ValueError) as e:
-        raise AIError(f"调用失败：{type(e).__name__}") from e
+        raise AIError(M("ai.e.call", e=type(e).__name__)) from e
 
 
 # ------------------------------------------------------------ 服务（含缓存）
@@ -229,36 +260,38 @@ class AIService:
         self.runner = runner or (call_cli if cfg.provider == "cli" else call_openai)
         self._lock = threading.Lock()
 
-    def _path(self, ticker: str) -> Path:
-        if not TICKER_RE.match(ticker):
-            raise AIError("无效的股票代码")
-        return self.dir / f"{ticker}.json"
+    def _path(self, ticker: str, lang: str) -> Path:
+        if not TICKER_RE.match(ticker) or lang not in ("zh", "en"):
+            raise AIError(M("ai.e.ticker"))
+        return self.dir / f"{ticker}.{lang}.json"
 
-    def cached(self, ticker: str) -> Optional[dict]:
+    def cached(self, ticker: str, lang: str = "en") -> Optional[dict]:
         try:
-            return json.loads(self._path(ticker).read_text(encoding="utf-8"))
+            return json.loads(self._path(ticker, lang).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
 
-    def cached_many(self, tickers: list[str]) -> dict[str, dict]:
-        return {t: c for t in tickers if (c := self.cached(t))}
+    def cached_many(self, tickers: list[str], lang: str = "en") -> dict[str, dict]:
+        return {t: c for t in tickers if (c := self.cached(t, lang))}
 
-    def generate(self, result: dict) -> dict:
+    def generate(self, result: dict, lang: str = "en") -> dict:
+        """研判用请求的语言生成，并按语言分别缓存。"""
         if not self.cfg.enabled:
-            raise AIError("未启用 AI（设置 GOLDEN_PIT_AI_PROVIDER=cli 或 openai）")
+            raise AIError(M("ai.e.disabled"))
         if result.get("error") or not result.get("checks"):
-            raise AIError("该标的没有可用的量化数据，无法研判")
-        snap = build_snapshot(result)
-        analysis = parse_and_validate(self.runner(build_prompt(snap), self.cfg))
-        record = {"ticker": result["ticker"], "snapshot_hash": snapshot_hash(snap), "model": self.cfg.model,
-                  "provider": self.cfg.provider, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                  "analysis": analysis}
+            raise AIError(M("ai.e.no_data"))
+        snap = build_snapshot(result, lang)
+        analysis = parse_and_validate(self.runner(build_prompt(snap, lang), self.cfg))
+        record = {"ticker": result["ticker"], "lang": lang, "snapshot_hash": snapshot_hash(result),
+                  "model": self.cfg.model, "provider": self.cfg.provider,
+                  "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "analysis": analysis}
+        path = self._path(result["ticker"], lang)
         with self._lock:
-            tmp = self._path(result["ticker"]).with_suffix(".tmp")
+            tmp = path.with_suffix(".tmp")
             tmp.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
-            os.replace(tmp, self._path(result["ticker"]))
+            os.replace(tmp, path)
         return record
 
     @staticmethod
     def is_stale(record: dict, result: dict) -> bool:
-        return record.get("snapshot_hash") != snapshot_hash(build_snapshot(result))
+        return record.get("snapshot_hash") != snapshot_hash(result)

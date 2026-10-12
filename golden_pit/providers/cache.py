@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Callable, Optional
 
+from ..i18n import M
 from ..models import RawStock, Statement, num
 from . import yahoo
 
@@ -42,7 +43,7 @@ class CachedProvider:
     # ---------------------------------------------------------------- 底层读写
     def _path(self, kind: str, ticker: str) -> Path:
         if not SAFE_NAME.match(ticker):
-            raise yahoo.FetchError(f"无效的股票代码：{ticker}")
+            raise yahoo.FetchError(M("err.bad_ticker", t=ticker))
         return self.dir / kind / f"{ticker}.json"
 
     def _read(self, kind: str, ticker: str, ttl: float) -> Optional[dict]:

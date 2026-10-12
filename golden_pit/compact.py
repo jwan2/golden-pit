@@ -1,8 +1,10 @@
-"""把完整结果压缩成给命令行 / AI 客户端看的精简结构（去掉图表数据等大字段）。"""
+"""把完整结果压缩成给命令行 / AI 客户端看的精简结构（去掉图表数据等大字段），并渲染成目标语言。"""
 from __future__ import annotations
 
+from .i18n import render
 
-def compact(r: dict, detail: bool = True) -> dict:
+
+def compact(r: dict, detail: bool = True, lang: str = "en") -> dict:
     v = r["verdict"]
     out = {
         "ticker": r["ticker"], "name": r.get("name"), "industry": r.get("industry"),
@@ -13,17 +15,16 @@ def compact(r: dict, detail: bool = True) -> dict:
         "unknown_checks": v["unknown_count"],
         "timing": (r.get("timing") or {}).get("label"),
     }
-    if not detail:
-        return out
-    out.update({
-        "reasons": v["reasons"],
-        "timing_reason": (r.get("timing") or {}).get("reason"),
-        "checks": [{k: c[k] for k in ("label", "status", "display", "rule", "note")} for c in r.get("checks", [])],
-        "entry_plan": [{k: lv[k] for k in ("drop_pct", "price", "weight_pct", "reached")}
-                       for lv in (r.get("plan") or {}).get("levels", [])],
-        "warnings": r.get("warnings", []),
-        "moat_view": (r.get("moat") or {}).get("summary"),
-        "data_fetched_at": r.get("fetched_at"),
-        "error": r.get("error"),
-    })
-    return out
+    if detail:
+        out.update({
+            "reasons": v["reasons"],
+            "timing_reason": (r.get("timing") or {}).get("reason"),
+            "checks": [{k: c[k] for k in ("label", "status", "display", "rule", "note")} for c in r.get("checks", [])],
+            "entry_plan": [{k: lv[k] for k in ("drop_pct", "price", "weight_pct", "reached")}
+                           for lv in (r.get("plan") or {}).get("levels", [])],
+            "warnings": r.get("warnings", []),
+            "moat_view": (r.get("moat") or {}).get("summary"),
+            "data_fetched_at": r.get("fetched_at"),
+            "error": r.get("error"),
+        })
+    return render(out, lang)

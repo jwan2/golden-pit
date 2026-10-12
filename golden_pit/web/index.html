@@ -1,26 +1,27 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>黄金坑筛选器</title>
+  <title>Golden Pit</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c58a00'/%3E%3Cpath d='M8 12h16l-6 9v-4h-4z' fill='%23fff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>黄金坑筛选器</h1>
-      <p id="freshness" class="muted">加载中…</p>
+      <h1 data-i18n="title">Golden Pit</h1>
+      <p id="freshness" class="muted" data-i18n="loading">Loading…</p>
     </div>
     <nav class="actions">
-      <button id="btn-scan" class="primary">运行扫描</button>
-      <button id="btn-track">战绩</button>
-      <button id="btn-history">历史</button>
-      <button id="btn-method">方法论</button>
-      <a class="btn" href="/api/export.csv" download>导出 CSV</a>
-      <a class="btn" href="/api/export.md" download>导出 MD</a>
+      <button id="btn-scan" class="primary" data-i18n="btn.scan">Run scan</button>
+      <button id="btn-track" data-i18n="btn.track">Track record</button>
+      <button id="btn-history" data-i18n="btn.history">History</button>
+      <button id="btn-method" data-i18n="btn.method">Method</button>
+      <a class="btn" id="btn-csv" href="/api/export.csv" download data-i18n="btn.csv">Export CSV</a>
+      <a class="btn" id="btn-md" href="/api/export.md" download data-i18n="btn.md">Export MD</a>
+      <button id="btn-lang" class="plain lang">中文</button>
     </nav>
   </header>
 
@@ -31,13 +32,13 @@
   <div id="banner" class="banner" hidden></div>
 
   <main>
-    <section id="summary" class="summary" aria-label="结论分布"></section>
+    <section id="summary" class="summary" data-i18n-aria="aria.summary" aria-label="Verdict summary"></section>
     <section id="changes" class="changes" hidden></section>
 
     <div class="toolbar">
-      <input id="search" type="search" placeholder="搜索代码、公司、行业" aria-label="搜索">
-      <label class="check"><input id="only-watch" type="checkbox"> ★ 只看自选</label>
-      <label class="check"><input id="hide-noise" type="checkbox" checked> 隐藏“不适用 / 抓取失败”</label>
+      <input id="search" type="search" data-i18n-ph="search.ph" data-i18n-aria="search.ph" placeholder="Search" aria-label="Search">
+      <label class="check"><input id="only-watch" type="checkbox"> <span data-i18n="only_watch">★ Watchlist only</span></label>
+      <label class="check"><input id="hide-noise" type="checkbox" checked> <span data-i18n="hide_noise">Hide "n/a / fetch errors"</span></label>
       <span id="count" class="muted"></span>
     </div>
 
@@ -49,48 +50,48 @@
       <div id="empty" class="empty" hidden></div>
     </div>
 
-    <p class="disclaimer muted">数据来自 Yahoo Finance，可能有延迟或错误；缺失的数据会标为“未知”，不会被当作通过。本工具只做筛选辅助，不构成投资建议。</p>
+    <p class="disclaimer muted" data-i18n="disclaimer"></p>
   </main>
 
-  <aside id="drawer" class="drawer" hidden aria-label="个股详情">
+  <aside id="drawer" class="drawer" hidden data-i18n-aria="aria.drawer" aria-label="Stock details">
     <div class="drawer-inner" id="drawer-body"></div>
   </aside>
   <div id="scrim" class="scrim" hidden></div>
 
   <dialog id="dlg-scan">
     <form method="dialog" id="scan-form">
-      <h2>运行扫描</h2>
+      <h2 data-i18n="scan.title">Run a scan</h2>
       <fieldset>
         <label class="radio"><input type="radio" name="mode" value="live" checked>
-          <span><b>Yahoo 实时筛选</b><small>从全美股里按“市值、52 周跌幅、P/B、FCF”初筛候选，再逐只判定</small></span></label>
+          <span><b data-i18n="scan.live.t"></b><small data-i18n="scan.live.d"></small></span></label>
         <label class="radio"><input type="radio" name="mode" value="curated">
-          <span><b>核心池</b><small>知识库里 18 个高壁垒行业的 82 只标的</small></span></label>
+          <span><b data-i18n="scan.curated.t"></b><small data-i18n="scan.curated.d"></small></span></label>
         <label class="radio"><input type="radio" name="mode" value="watch">
-          <span><b>我的自选 ★</b><small>只扫描你标星的股票</small></span></label>
+          <span><b data-i18n="scan.watch.t"></b><small data-i18n="scan.watch.d"></small></span></label>
         <label class="radio"><input type="radio" name="mode" value="custom">
-          <span><b>自定义代码</b><small>空格或逗号分隔，最多 60 只</small></span></label>
+          <span><b data-i18n="scan.custom.t"></b><small data-i18n="scan.custom.d"></small></span></label>
       </fieldset>
       <p id="watch-note" class="muted small" hidden></p>
-      <textarea id="custom-tickers" rows="2" placeholder="例如：MCD, NKE, BKNG" hidden></textarea>
-      <label id="token-row" class="field" hidden>管理员令牌
+      <textarea id="custom-tickers" rows="2" data-i18n-ph="scan.custom.ph" hidden></textarea>
+      <label id="token-row" class="field" hidden><span data-i18n="scan.token">Admin token</span>
         <input id="token" type="password" autocomplete="off" placeholder="X-Admin-Token">
       </label>
       <p id="scan-error" class="error" hidden></p>
       <div class="dlg-actions">
-        <button value="cancel" class="plain">取消</button>
-        <button id="scan-go" class="primary" value="go">开始</button>
+        <button value="cancel" class="plain" data-i18n="cancel">Cancel</button>
+        <button id="scan-go" class="primary" value="go" data-i18n="start">Start</button>
       </div>
     </form>
   </dialog>
 
   <dialog id="dlg-method"><div class="dlg-body" id="method-body"></div>
-    <form method="dialog" class="dlg-actions"><button class="primary">关闭</button></form></dialog>
+    <form method="dialog" class="dlg-actions"><button class="primary" data-i18n="close">Close</button></form></dialog>
 
   <dialog id="dlg-track" class="wide"><div class="dlg-body" id="track-body"></div>
-    <form method="dialog" class="dlg-actions"><button class="plain">关闭</button></form></dialog>
+    <form method="dialog" class="dlg-actions"><button class="plain" data-i18n="close">Close</button></form></dialog>
 
   <dialog id="dlg-history"><div class="dlg-body" id="history-body"></div>
-    <form method="dialog" class="dlg-actions"><button class="plain">关闭</button></form></dialog>
+    <form method="dialog" class="dlg-actions"><button class="plain" data-i18n="close">Close</button></form></dialog>
 
   <script src="/static/app.js" type="module"></script>
 </body>

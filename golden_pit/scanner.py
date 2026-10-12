@@ -11,6 +11,7 @@ from typing import Callable, Optional
 from . import SCHEMA_VERSION, universe
 from .analyze import analyze_ticker, error_result
 from .config import ScreenerConfig, Thresholds
+from .i18n import M, MsgError, msg_of
 from .models import RawStock
 from .providers.yahoo import fetch_raw
 from .scoring import TIER_ORDER
@@ -80,7 +81,7 @@ class Scanner:
             if self.state["running"]:
                 return False
             self.state = {**self._idle_state(), "running": True, "stage": "universe",
-                          "message": "正在确定候选池…", "started_at": time.time()}
+                          "message": M("s.universe"), "started_at": time.time()}
         threading.Thread(target=self._run, args=(mode, tickers or [], trigger), daemon=True).start()
         return True
 
@@ -88,19 +89,19 @@ class Scanner:
         try:
             self.run_sync(mode, custom, trigger)
         except Exception as e:  # noqa: BLE001
-            self._set(running=False, stage="error", message="扫描失败", error=str(e))
+            self._set(running=False, stage="error", message=M("s.failed"), error=msg_of(e))
 
     def run_sync(self, mode: str, custom: list[str], trigger: str) -> dict:
         started = datetime.now(timezone.utc)
         if mode == "custom":
-            tickers, note = universe.parse_tickers(custom), "自定义代码"
+            tickers, note = universe.parse_tickers(custom), M("u.custom")
             if not tickers:
-                raise ValueError("没有有效的股票代码")
+                raise MsgError(M("u.no_tickers"))
         elif mode == "curated":
             tickers, note = universe.curated()
         else:
             tickers, note = universe.live_screen(self.screener)
-        self._set(stage="analyzing", total=len(tickers), done=0, message=f"正在分析 {len(tickers)} 只标的…")
+        self._set(stage="analyzing", total=len(tickers), done=0, message=M("s.analyzing", n=len(tickers)))
 
         results: dict[str, dict] = {}
         pool = ThreadPoolExecutor(max_workers=self.workers)
@@ -116,7 +117,7 @@ class Scanner:
         finally:
             pool.shutdown(wait=False, cancel_futures=True)
         for t in tickers:  # 超时未完成的如实标记，不丢弃
-            results.setdefault(t, error_result(t, f"{t}：扫描超时（>{SCAN_DEADLINE_SECONDS // 60} 分钟）"))
+            results.setdefault(t, error_result(t, M("err.timeout", t=t, m=SCAN_DEADLINE_SECONDS // 60)))
 
         ordered = sorted(results.values(), key=lambda r: r["verdict"]["sort_key"] + [r["ticker"]])
         finished = datetime.now(timezone.utc)
@@ -134,18 +135,17 @@ class Scanner:
         scan["changes"] = diff_scans(self.store.latest(), scan)
         self.store.save_scan(scan)
         if self.tracker and self.price:
-            self._set(stage="tracking", message="正在更新战绩追踪…")
+            self._set(stage="tracking", message=M("s.tracking"))
             try:
                 self.tracker.update(scan, self.price)
             except Exception as e:  # noqa: BLE001 — 追踪失败不影响扫描结果，但要留痕
-                scan.setdefault("notes", []).append(f"战绩追踪更新失败：{e}")
+                scan.setdefault("notes", []).append(M("s.track_failed", e=str(e)))
         if self.on_complete:
             try:
                 self.on_complete(scan)
             except Exception:  # noqa: BLE001 — 后处理（如自动 AI 研判）失败不能影响扫描结果
                 pass
-        failed = scan["summary"]["error"]
-        self._set(running=False, stage="done", done=len(tickers), current="",
-                  message=f"完成：{len(tickers)} 只，其中黄金坑 {scan['summary']['golden_pit']} 只"
-                          + (f"，{failed} 只抓取失败" if failed else ""))
+        failed, golden = scan["summary"]["error"], scan["summary"]["golden_pit"]
+        msg = M("s.done_failed", n=len(tickers), g=golden, f=failed) if failed else M("s.done", n=len(tickers), g=golden)
+        self._set(running=False, stage="done", done=len(tickers), current="", message=msg)
         return scan

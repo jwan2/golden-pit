@@ -18,6 +18,14 @@ golden-pit serve
 
 **缺失或不可靠的数据，永远不能变成"通过"。** 算不准就返回 `UNKNOWN`，并写清原因。任何规则改动都要在 `tests/` 里有对应测试。
 
+## Text and translations
+
+All user-facing text is bilingual (中文 / English):
+
+- **Backend:** never put display text in a string. Return `M("key", **params)` and add the key with both languages to `CATALOG` in `golden_pit/i18n.py`. Text is rendered per request (`?lang=`), so stored scans are language-neutral.
+- **Web UI:** add the key to both `zh` and `en` in `golden_pit/web/i18n.js` and use `t('key')`.
+- `pytest` and `node tests/check_web_i18n.mjs` fail if a key is missing, placeholders differ, or Chinese leaks into English output.
+
 ## Where things live
 
 | File | Responsibility |

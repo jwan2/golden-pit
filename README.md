@@ -5,7 +5,7 @@
 
 [English](#english) · [中文](#中文)
 
-![Golden Pit table view](docs/screenshot-table.jpg)
+![Golden Pit table view](docs/screenshot-table-en.jpg)
 
 ---
 
@@ -41,7 +41,10 @@ Free market data is messy. Golden Pit refuses to guess:
 - **Forward track record.** Every golden-pit call is logged with its price and compared to SPY going forward. This replaces a backtest: free data has no point-in-time fundamentals, so a backtest would be look-ahead-biased.
 - **Optional AI research notes** via Command Code CLI or any OpenAI-compatible API. The model sees only our computed snapshot, output is schema-validated, and notes are labelled *opinion, not part of the verdict*.
 - **CLI and MCP server**, so Claude Code and other agents can call it directly.
+- **Bilingual (English / 中文)** everywhere: web UI with a language toggle, CLI (`--lang`), API (`?lang=`), MCP, exports and AI notes.
 - **Disk cache.** Rescans take seconds instead of minutes.
+
+![Detail: price chart, timing and staged entry plan](docs/screenshot-detail-en.jpg)
 
 ### Quick start
 
@@ -61,6 +64,7 @@ Data lives in `~/.golden-pit`. You can override it with `GOLDEN_PIT_DATA`. Thres
 | Env var | Meaning |
 |---|---|
 | `GOLDEN_PIT_ADMIN_TOKEN` | Required for scans/AI when not on localhost (header `X-Admin-Token`). Without it, only localhost may trigger actions. |
+| `GOLDEN_PIT_LANG` | `en` or `zh` — default language for the CLI, MCP and API (the web app follows the browser and has a toggle) |
 | `GOLDEN_PIT_HOST` / `GOLDEN_PIT_PORT` | Default `127.0.0.1:5000` |
 | `GOLDEN_PIT_DATA` | Data directory (default `~/.golden-pit`) |
 | `GOLDEN_PIT_SCHEDULER=1`, `GOLDEN_PIT_SLOTS` | Auto-scan on US weekdays, default `08:30,16:15` ET |
@@ -111,6 +115,8 @@ Use a single worker. Scan state and the scheduler live in-process.
 
 - **网页**：可排序表格、结论理由、11 项指标逐条（值 / 要求 / 备注）、★ 自选、CSV / Markdown 导出、历史回看
 
+![表格视图](docs/screenshot-table.jpg)
+
 ![详情：走势图与分批计划](docs/screenshot-detail.jpg)
 
 - **走势时机**：标出下跌中 / 筑底中 / 企稳反弹，并画一年价格图和分批价位线。回答"跌完了吗"，不改变判定
@@ -118,6 +124,7 @@ Use a single worker. Scan state and the scheduler live in-process.
 - **战绩追踪**：每次判为黄金坑都记录价格，之后持续与 SPY 对比。免费数据没有历史时点财报，回测会有前视偏差，所以用前向记录代替
 - **AI 研判（可选）**：支持 Command Code CLI 或任意 OpenAI 兼容接口。模型只能看我们算好的快照，输出逐字段校验，标注"观点·不计入判定"
 - **命令行和 MCP server**：Claude Code 等 AI 客户端可直接调用
+- **中英双语**：网页（右上角一键切换）、命令行（`--lang zh`）、接口（`?lang=zh`）、MCP、导出和 AI 研判都支持
 - **本地缓存**：重复扫描从几分钟降到几秒
 
 ### 快速开始

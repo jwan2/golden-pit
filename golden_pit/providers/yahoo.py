@@ -11,11 +11,12 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
+from ..i18n import M, MsgError
 from ..models import RawStock, Statement, num
 
 
-class FetchError(Exception):
-    """取数失败（网络、限流、代码无效等）。消息会直接展示给用户。"""
+class FetchError(MsgError):
+    """取数失败（网络、限流、代码无效等）。.msg 会按语言展示给用户。"""
 
 
 def now_iso() -> str:
@@ -71,7 +72,7 @@ def _retry(fn, ticker: str, retries: int = 2):
             last = e
             if attempt < retries:
                 time.sleep(1.5 * (attempt + 1) + random.random())
-    raise FetchError(f"{ticker}：抓取失败（{type(last).__name__}: {last}）")
+    raise FetchError(M("err.fetch", t=ticker, e=f"{type(last).__name__}: {last}"))
 
 
 def fetch_quote(ticker: str) -> dict:
@@ -82,7 +83,7 @@ def fetch_quote(ticker: str) -> dict:
         info = t.info or {}
         price = num(info.get("currentPrice")) or num(info.get("regularMarketPrice"))
         if not price:
-            raise FetchError(f"{ticker}：没有行情数据（代码无效、已退市或停牌）")
+            raise FetchError(M("err.no_quote", t=ticker))
         hist = _safe(lambda: t.history(period="1y", interval="1d", auto_adjust=False))
         return {"info": info, "closes": _closes(hist), "fetched_at": now_iso()}
     return _retry(go, ticker)

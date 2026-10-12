@@ -3,12 +3,15 @@
 这是人写的行业观点，只对知识库里明确列出的代码生效，并且：
 - 不再用关键词去匹配行业（旧版会把 T-Mobile 当成"标准必要专利"公司）
 - 不计入量化判定，仅作为"观点"展示，由使用者自行判断
+- 中英双语（字段名带 _en 的为英文）
 """
 from __future__ import annotations
 
 import json
 from functools import lru_cache
 from pathlib import Path
+
+from .i18n import M, T
 
 KB_PATH = Path(__file__).parent / "data" / "moat_kb.json"
 
@@ -24,14 +27,15 @@ def lookup(ticker: str) -> dict | None:
     ind = _load()[1].get(ticker.upper())
     if not ind:
         return None
+    bi = lambda k: T(ind[k], ind.get(f"{k}_en") or ind[k])  # noqa: E731
     return {
-        "industry": ind["industry"],
-        "summary": ind["moat_reason"],
-        "disruption_risk": ind["disruption_risk"],
-        "capacity_barrier": ind["capacity_barrier"],
-        "disruption_view": ind["disruption_view"],
-        "capacity_view": ind["capacity_view"],
-        "source": "人工知识库（行业级观点，非公司级结论，不计入判定）",
+        "industry": bi("industry"),
+        "summary": bi("moat_reason"),
+        "disruption_risk": bi("disruption_risk"),
+        "capacity_barrier": bi("capacity_barrier"),
+        "disruption_view": bi("disruption_view"),
+        "capacity_view": bi("capacity_view"),
+        "source": M("moat.source"),
     }
 
 

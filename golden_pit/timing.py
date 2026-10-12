@@ -12,13 +12,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-STATES = {
-    "falling": "下跌中",
-    "basing": "筑底中",
-    "rebounding": "企稳反弹",
-    "unclear": "方向不明",
-    "unknown": "数据不足",
-}
+from .i18n import M
+
+STATES = {s: M(f"tm.{s}") for s in ("falling", "basing", "rebounding", "unclear", "unknown")}
 MIN_DAYS = 60
 RECENT_LOW_DAYS = 10
 BASE_BAND_PCT = 12.0
@@ -50,7 +46,7 @@ def rsi(xs: list[float], n: int = 14) -> Optional[float]:
 def analyze_timing(closes: list[tuple[str, float]]) -> dict:
     if len(closes) < MIN_DAYS:
         return {"state": "unknown", "label": STATES["unknown"],
-                "reason": f"价格历史不足 {MIN_DAYS} 个交易日", "metrics": {}}
+                "reason": M("tm.r.history", n=MIN_DAYS), "metrics": {}}
     xs = [c for _, c in closes]
     last = xs[-1]
     low = min(xs)
@@ -69,17 +65,18 @@ def analyze_timing(closes: list[tuple[str, float]]) -> dict:
 
     if last < ma20 and slope < 0 and days_since_low <= RECENT_LOW_DAYS:
         state = "falling"
-        reason = f"{days_since_low} 个交易日前刚创一年新低，价格在 MA20 下方且均线仍在下行"
+        reason = M("tm.r.falling", d=days_since_low)
     elif last > ma20 and slope > 0 and days_since_low > RECENT_LOW_DAYS:
         state = "rebounding"
-        reason = f"低点（{closes[low_idx][0]}）后 {days_since_low} 个交易日未再创新低，已站上拐头向上的 MA20，距低点 +{above_low:.1f}%"
+        reason = M("tm.r.rebounding", date=closes[low_idx][0], d=days_since_low, above=f"{above_low:.1f}")
     elif above_low <= BASE_BAND_PCT and (days_since_low > RECENT_LOW_DAYS or abs(slope) <= FLAT_SLOPE_PCT):
         state = "basing"
-        reason = (f"价格贴近一年低点（+{above_low:.1f}%），MA20 5 日变化 {slope:+.1f}%，在底部横盘"
-                  + (f"，且 {days_since_low} 个交易日未破底" if days_since_low > RECENT_LOW_DAYS else ""))
+        held = days_since_low > RECENT_LOW_DAYS
+        reason = M("tm.r.basing_held" if held else "tm.r.basing", above=f"{above_low:.1f}",
+                   slope=f"{slope:+.1f}", d=days_since_low)
     else:
         state = "unclear"
-        reason = f"距一年低点 +{above_low:.1f}%，MA20 5 日变化 {slope:+.1f}%，没有清晰的下跌或企稳特征"
+        reason = M("tm.r.unclear", above=f"{above_low:.1f}", slope=f"{slope:+.1f}")
     return {"state": state, "label": STATES[state], "reason": reason, "metrics": m}
 
 

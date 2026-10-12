@@ -208,3 +208,5 @@ dialog.wide { width: min(760px, calc(100vw - 32px)); }
 .stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
 .stat .l { font-size: 12px; color: var(--muted); } .stat .n { font-size: 22px; font-weight: 700; }
 td.up { color: var(--pass); } td.down { color: var(--fail); }
+
+.lang { font-weight: 600; min-width: 56px; justify-content: center; }

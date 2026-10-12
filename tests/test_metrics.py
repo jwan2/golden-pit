@@ -3,9 +3,12 @@ import math
 
 from golden_pit import metrics
 from golden_pit.config import Thresholds
+from golden_pit.i18n import render
 from golden_pit.models import FAIL, NA, PASS, UNKNOWN
 
 TH = Thresholds()
+zh = lambda x: render(x, "zh")  # noqa: E731
+en = lambda x: render(x, "en")  # noqa: E731
 
 
 def by_key(raw, th=TH):
@@ -61,7 +64,7 @@ def test_net_cash_passes_without_ebitda(mutate):
 def test_altman_missing_inputs_is_unknown_and_names_them(mutate):
     r = mutate(lambda r: r.balance.rows.pop("Retained Earnings"))
     c = by_key(r)["altman_z"]
-    assert c.status == UNKNOWN and "留存收益" in c.note
+    assert c.status == UNKNOWN and "留存收益" in zh(c.note) and "retained earnings" in en(c.note)
 
 
 def test_altman_value(raw):
@@ -78,7 +81,7 @@ def test_share_reduction_threshold_zero_change_fails(mutate):
 def test_share_change_with_split_in_window_is_unknown(mutate):
     r = mutate(lambda r: setattr(r, "splits", [(f"{r.balance.dates[1]}", 10.0)]))
     c = by_key(r)["share_change"]
-    assert c.status == UNKNOWN and "拆" in c.note
+    assert c.status == UNKNOWN and "拆" in zh(c.note) and "Split" in en(c.note)
 
 
 def test_share_change_needs_enough_history(mutate):
@@ -105,7 +108,7 @@ def test_buyback_missing_statement_is_unknown(mutate):
 def test_negative_pb_never_passes(mutate):
     r = mutate(lambda r: r.info.update({"priceToBook": -161.0}))
     c = by_key(r)["pb"]
-    assert c.status == FAIL and "净资产为负" in c.note
+    assert c.status == FAIL and "净资产为负" in zh(c.note)
 
 
 def test_forward_pe_infinity_is_unknown(mutate):
@@ -155,7 +158,7 @@ def test_stale_statements_warn(mutate):
         r.balance.dates = ["2020-12-31", "2019-12-31", "2018-12-31", "2017-12-31"]
     r = mutate(f)
     w = metrics.build_warnings(r, metrics.build_facts(r))
-    assert any("过期" in x for x in w)
+    assert any("过期" in x for x in zh(w)) and any("months old" in x for x in en(w))
 
 
 # ---- 币种
@@ -163,13 +166,13 @@ def test_currency_mismatch_makes_cap_ratios_unknown(mutate):
     """旧版 SONY：日元回购额 ÷ 美元市值 = 368% 的"回购收益率"。"""
     r = mutate(lambda r: r.info.update({"currency": "USD", "financialCurrency": "JPY"}))
     checks = by_key(r)
-    assert checks["buyback_yield"].status == UNKNOWN and "JPY" in checks["buyback_yield"].note
+    assert checks["buyback_yield"].status == UNKNOWN and "JPY" in zh(checks["buyback_yield"].note)
     assert checks["altman_z"].status == UNKNOWN
     assert checks["interest_coverage"].status == PASS            # 纯财报内部比值不受影响
     w = metrics.build_warnings(r, metrics.build_facts(r))
-    assert any("JPY" in x for x in w)
+    assert any("JPY" in x for x in zh(w))
 
 
 def test_money_shows_statement_currency(mutate):
     r = mutate(lambda r: r.info.update({"currency": "USD", "financialCurrency": "JPY", "totalCash": 9e12, "totalDebt": 1e12}))
-    assert "JPY" in by_key(r)["net_debt_ebitda"].note
+    assert "JPY" in en(by_key(r)["net_debt_ebitda"].note)

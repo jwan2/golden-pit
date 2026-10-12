@@ -24,6 +24,8 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest
-      - name: JS syntax check
+      - name: Web UI checks (syntax + i18n dictionary)
         if: runner.os == 'Linux'
-        run: node --check golden_pit/web/app.js
+        run: |
+          node --check golden_pit/web/app.js
+          node tests/check_web_i18n.mjs

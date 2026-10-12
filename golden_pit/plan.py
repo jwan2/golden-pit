@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .config import Thresholds
+from .i18n import M
 
 DEFAULT_TRANCHES = ((0.0, 40), (10.0, 30), (20.0, 30))   # (相对入场线再多跌几个点, 仓位占比%)
 
@@ -28,9 +29,5 @@ def entry_plan(price: Optional[float], high: Optional[float], th: Thresholds) ->
     return {
         "anchor_high": round(high, 2),
         "levels": levels,
-        "invalidation": [
-            "下一次扫描质量门槛不再过关（财务或管理层项目转为未通过）→ 暂停加仓，重新评估",
-            "出现无法解释的新增“未知”项或数据警告 → 先核实数据再行动",
-            "坑的成因从周期性/情绪性变为结构性衰退 → 这不再是黄金坑",
-        ],
+        "invalidation": [M("plan.inv.quality"), M("plan.inv.data"), M("plan.inv.structural")],
     }

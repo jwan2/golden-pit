@@ -11,19 +11,12 @@
 from __future__ import annotations
 
 from .config import Thresholds
+from .i18n import M
 from .models import FAIL, NA, PASS, UNKNOWN, Check
 
-# 顺序即默认排序
-TIERS = {
-    "golden_pit":   {"label": "黄金坑",        "desc": "质量过关，且价格确实在坑里"},
-    "quality_wait": {"label": "优质 · 待价",    "desc": "公司质量过关，但价格还没到坑位"},
-    "value_trap":   {"label": "坑里 · 质量不足", "desc": "价格够便宜，但财务或管理层没过关（价值陷阱风险）"},
-    "fail":         {"label": "未通过",        "desc": "质量和坑位都不满足"},
-    "insufficient": {"label": "数据不足",       "desc": "关键数据缺失过多，不下结论"},
-    "n_a":          {"label": "不适用",        "desc": "金融业等不适用本框架的公司"},
-    "error":        {"label": "抓取失败",       "desc": "数据源没有返回有效数据"},
-}
-TIER_ORDER = list(TIERS)
+# 顺序即默认排序。label/desc 是 i18n 消息
+TIER_ORDER = ["golden_pit", "quality_wait", "value_trap", "fail", "insufficient", "n_a", "error"]
+TIERS = {t: {"label": M(f"tier.{t}"), "desc": M(f"tier.{t}.desc")} for t in TIER_ORDER}
 
 
 def _by_group(checks: list[Check], group: str) -> list[Check]:
@@ -34,13 +27,16 @@ def _count(checks: list[Check], status: str) -> int:
     return sum(1 for c in checks if c.status == status)
 
 
-def _problem_lines(checks: list[Check]) -> list[str]:
+def _problem_lines(checks: list[Check]) -> list[dict]:
     lines = []
     for c in checks:
         if c.status == FAIL:
-            lines.append(f"✗ {c.label} {c.display}（要求 {c.rule}）" + (f" — {c.note}" if c.note else ""))
+            if c.note:
+                lines.append(M("r.fail_note", label=c.label, display=c.display, rule=c.rule, note=c.note))
+            else:
+                lines.append(M("r.fail", label=c.label, display=c.display, rule=c.rule))
         elif c.status == UNKNOWN:
-            lines.append(f"? {c.label} 无法判断 — {c.note}")
+            lines.append(M("r.unknown", label=c.label, note=c.note))
     return lines
 
 
@@ -70,21 +66,19 @@ def decide(checks: list[Check], facts: dict, th: Thresholds) -> dict:
     else:
         tier = "fail"
 
-    reasons: list[str] = []
+    reasons: list[dict] = []
     if tier == "n_a":
-        reasons.append("金融业公司的利息保障、流动比率、净负债等指标没有可比意义，不纳入评判。")
+        reasons.append(M("r.na_financial"))
     elif tier == "insufficient":
-        reasons.append(f"财务+管理层 8 项中有 {unknown} 项数据缺失（上限 {th.max_unknown_checks}），不下结论。")
+        reasons.append(M("r.insufficient", n=unknown, max=th.max_unknown_checks))
         reasons += _problem_lines(fin + mgmt)
         if drop.status == UNKNOWN:
-            reasons.append("? 缺少价格或 52 周高点，无法判断是否在坑里")
+            reasons.append(M("r.no_drop"))
     else:
-        reasons.append(
-            f"质量：财务 {fin_pass}/{fin_total}（要求 ≥{th.financial_min_pass}），"
-            f"管理层 {mgmt_pass}/3（要求 ≥{th.management_min_pass}） → {'过关' if quality_ok else '未过关'}")
-        reasons.append(
-            f"坑位：回撤 {drop.display}（要求 ≥{th.drop_from_high_min_pct:.0f}%），"
-            f"估值锚点 {anchors}/2 合格（要求 ≥{th.pit_min_anchors}） → {'在坑里' if pit_ok else '不在坑里'}")
+        reasons.append(M("r.quality", fp=fin_pass, ft=fin_total, fmin=th.financial_min_pass, mp=mgmt_pass,
+                         mmin=th.management_min_pass, res=M("r.quality_ok" if quality_ok else "r.quality_no")))
+        reasons.append(M("r.pit", drop=drop.display, min=f"{th.drop_from_high_min_pct:.0f}", a=anchors,
+                         amin=th.pit_min_anchors, res=M("r.pit_in" if pit_ok else "r.pit_out")))
         reasons += _problem_lines(fin + mgmt + [drop, pb, fpe] if not pit_ok else fin + mgmt)
 
     drop_val = drop.value if drop.value is not None else -1.0

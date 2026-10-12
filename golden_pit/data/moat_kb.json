@@ -1,6 +1,6 @@
 [
   {
-    "industry": "航空租赁 / Aircraft Leasing",
+    "industry": "航空租赁",
     "tickers": [
       "AER",
       "FTAI"
@@ -9,10 +9,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 新机订单积压5-8年，波音空客供应链瓶颈坚固",
     "disruption_view": "航空出行符合基本物理规律，洲际旅行和高效率跨洋运输不可被替代。即便技术进步，航空公司更倾向于轻资产运营，租赁渗透率超过50%，拥有优质窄体/宽体机队资产的企业具有不可动摇的刚需地位。",
-    "capacity_view": "全球商用客机产能被波音与空客严格垄断。任何新玩家即使坐拥百亿资本，也无法凭空造出飞机或跳过交付排期。AerCap拥有全球最大的民航机队，机队置换与租约锁定赋予其极高定价权。"
+    "capacity_view": "全球商用客机产能被波音与空客严格垄断。任何新玩家即使坐拥百亿资本，也无法凭空造出飞机或跳过交付排期。AerCap拥有全球最大的民航机队，机队置换与租约锁定赋予其极高定价权。",
+    "industry_en": "Aircraft Leasing",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — 5–8 year order backlog; the Boeing/Airbus supply chain is a hard bottleneck",
+    "moat_reason_en": "Mainline commercial aircraft supply is a Boeing–Airbus duopoly with an 8+ year delivery backlog. Long-haul air travel is a physical necessity that video calls can't replace.",
+    "disruption_view_en": "Air travel obeys basic physics: intercontinental travel and fast ocean-crossing transport can't be substituted. Airlines increasingly run asset-light with over 50% of fleets leased, so owners of quality narrow- and wide-body fleets hold an entrenched position.",
+    "capacity_view_en": "Global airliner capacity is tightly held by Boeing and Airbus. Even a well-funded newcomer can't conjure aircraft or skip the delivery queue. AerCap runs the world's largest commercial fleet, and fleet renewal plus lease lock-ins give it strong pricing power."
   },
   {
-    "industry": "铜矿采选 / Copper Mining",
+    "industry": "铜矿采选",
     "tickers": [
       "FCX",
       "SCCO",
@@ -23,10 +29,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 10-15年新矿开发周期，矿石品位全球自然衰减",
     "disruption_view": "铜具备除银之外最优异的导电与导热物理特性，在变压器、高压输电、电机与数据中心算力供电中具有绝对不可替代性。未来20年电气化趋势只会强化铜的需求强度。",
-    "capacity_view": "全球优质露天铜矿已被瓜分殆尽，新发现大型高品位斑岩铜矿极其罕见。即便铜价暴涨，竞争对手也绝无可能在1-3年内扩产建厂打烂利润，刚性供给时间壁垒极其坚不可摧。"
+    "capacity_view": "全球优质露天铜矿已被瓜分殆尽，新发现大型高品位斑岩铜矿极其罕见。即便铜价暴涨，竞争对手也绝无可能在1-3年内扩产建厂打烂利润，刚性供给时间壁垒极其坚不可摧。",
+    "industry_en": "Copper Mining",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — 10–15 year mine development cycle; ore grades decline globally",
+    "moat_reason_en": "The conductive metal behind electrification, AI data centres and the energy-transition supercycle. A quality new copper mine takes at least 10–15 years from exploration to production, with steep permitting and water barriers.",
+    "disruption_view_en": "After silver, copper has the best electrical and thermal conductivity, making it irreplaceable in transformers, HV transmission, motors and data-centre power. Electrification only intensifies demand over the next 20 years.",
+    "capacity_view_en": "The world's quality open-pit copper deposits are largely claimed and large high-grade porphyry discoveries are rare. Even with a price spike, rivals can't build enough supply within 1–3 years to crush margins — the supply lag is a hard barrier."
   },
   {
-    "industry": "铀矿/核能燃料 / Uranium & Nuclear",
+    "industry": "铀矿/核能燃料",
     "tickers": [
       "CCJ",
       "UEC",
@@ -37,10 +49,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 核安全监管审批严格，浓缩离心机技术全球封锁",
     "disruption_view": "风光等间歇性绿电无法满足AI算力中心与高精制造业对电网99.999%稳定度的基荷供电要求，核裂变/核聚变是基础物理学的终极能源路径，铀作为裂变材料不可替代。",
-    "capacity_view": "铀矿不仅开发周期长达10年，更受到IAEA国际原子能机构与各国安全监管的严密监控。高浓缩铀与转化浓缩产能受地缘政治封锁，其他玩家无法通过资本突击内卷产能。"
+    "capacity_view": "铀矿不仅开发周期长达10年，更受到IAEA国际原子能机构与各国安全监管的严密监控。高浓缩铀与转化浓缩产能受地缘政治封锁，其他玩家无法通过资本突击内卷产能。",
+    "industry_en": "Uranium & Nuclear",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — strict nuclear-safety licensing; enrichment centrifuge technology is tightly controlled",
+    "moat_reason_en": "AI data centres need 24/7 zero-carbon baseload power, and nuclear is the only scalable commercial option. Uranium mining and enrichment licences carry state-level secrecy and safety hurdles.",
+    "disruption_view_en": "Intermittent wind and solar can't deliver the 99.999% reliable baseload that AI data centres and precision manufacturing need. Fission (and eventually fusion) is the physics endgame, and uranium as fission fuel has no substitute.",
+    "capacity_view_en": "Uranium mines take about a decade to develop and are closely monitored by the IAEA and national regulators. Enrichment and conversion capacity is geopolitically constrained, so capital alone can't flood the market with supply."
   },
   {
-    "industry": "电网设备 / Grid Infrastructure",
+    "industry": "电网设备",
     "tickers": [
       "ETN",
       "EMR",
@@ -51,10 +69,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "高 - 取向硅钢等原材料受限，重型高压试验与认证周期长",
     "disruption_view": "电网是现代人类文明最根本的血管。无论上游发电技术发生何种颠覆，下游用电必须依赖物理变电、配电、断路和开关设备。输变电物理学原理不会改变。",
-    "capacity_view": "大型电力变压器核心原材料取向电工硅钢（GOES）全球产能受限，且设备均为高度定制化设计，需通过严苛的公用事业入网耐久度安全认证，新建工厂到达标投产需数年之久。"
+    "capacity_view": "大型电力变压器核心原材料取向电工硅钢（GOES）全球产能受限，且设备均为高度定制化设计，需通过严苛的公用事业入网耐久度安全认证，新建工厂到达标投产需数年之久。",
+    "industry_en": "Grid Infrastructure",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "High — grain-oriented electrical steel is scarce; heavy HV testing and certification take years",
+    "moat_reason_en": "Whatever the generation source — nuclear, gas or renewables — power must flow through physical substations and distribution grids. Lead times for extra-high-voltage transformers and custom switchgear have stretched to 3–4 years.",
+    "disruption_view_en": "The grid is the circulatory system of modern civilisation. However upstream generation changes, end users still depend on physical transformers, distribution, breakers and switchgear. The physics of transmission doesn't change.",
+    "capacity_view_en": "Large power transformers depend on grain-oriented electrical steel (GOES), whose global capacity is limited, and the equipment is highly customised and must pass strict utility durability certification. A new plant takes years to reach qualified output."
   },
   {
-    "industry": "国防军工 / Defense & Aerospace",
+    "industry": "国防军工",
     "tickers": [
       "LMT",
       "RTX",
@@ -67,10 +91,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 国家安全审查、专用生产许可与绝密资质",
     "disruption_view": "地缘政治博弈与国家生存是永恒主题。五代机、隐身轰炸机、雷达传感器与导弹防御系统代表人类精密工程巅峰，受国家防务法令强力保护，不受民用商业颠覆影响。",
-    "capacity_view": "军工资质属于主权特许经营权。外国资本或非准入玩家即便掌握资金，在法律上被严禁涉足，没有任何第三方在短期内复制F-35或战斧导弹生产线的可能性。"
+    "capacity_view": "军工资质属于主权特许经营权。外国资本或非准入玩家即便掌握资金，在法律上被严禁涉足，没有任何第三方在短期内复制F-35或战斧导弹生产线的可能性。",
+    "industry_en": "Defense & Aerospace",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — national-security vetting, dedicated production licences and classified clearances",
+    "moat_reason_en": "National security is a non-negotiable need and defence budgets hold up across economic cycles. Prime-contractor status on Pentagon programmes is hard to earn, and proprietary IP plus government contracts lock positions in for decades.",
+    "disruption_view_en": "Geopolitical rivalry and national survival are permanent themes. Fifth-generation fighters, stealth bombers, radar and missile defence sit at the peak of precision engineering and are protected by defence law, insulated from commercial disruption.",
+    "capacity_view_en": "Defence clearances are sovereign franchises. Foreign or non-cleared capital is legally barred, and no third party can replicate an F-35 or Tomahawk production line in the short term."
   },
   {
-    "industry": "特种化工/工业气体 / Specialty Chemicals & Gases",
+    "industry": "特种化工/工业气体",
     "tickers": [
       "LIN",
       "APD",
@@ -81,10 +111,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "高 - 管道基础设施独占性与超长照付不议合约",
     "disruption_view": "芯片光刻、化工精炼、医疗生命维持对高纯度气体需求基于基础物理与化学反应，绝无被纯软件或虚拟模型替代的可能。",
-    "capacity_view": "由于气体运输成本随半径剧增，林德、空气产品在大型产业园构建了排他性深冷空分站和地下管网。新进入者如果重复铺设管道将面临致命亏损，形成稳固局部自然垄断。"
+    "capacity_view": "由于气体运输成本随半径剧增，林德、空气产品在大型产业园构建了排他性深冷空分站和地下管网。新进入者如果重复铺设管道将面临致命亏损，形成稳固局部自然垄断。",
+    "industry_en": "Specialty Chemicals & Gases",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "High — exclusive pipeline infrastructure and very long take-or-pay contracts",
+    "moat_reason_en": "Industrial gases (oxygen, nitrogen, hydrogen, argon) are the 'lifeblood' of modern manufacturing and chipmaking. On-site pipelines run straight into customer plants under 15–20 year take-or-pay contracts, creating natural local monopolies.",
+    "disruption_view_en": "Demand for high-purity gases in lithography, refining and medical life support rests on basic physics and chemistry; no software or virtual model can replace it.",
+    "capacity_view_en": "Because gas transport costs rise steeply with distance, Linde and Air Products have built exclusive air-separation units and underground pipeline networks in major industrial parks. A newcomer duplicating pipelines would face ruinous losses."
   },
   {
-    "industry": "铁路运输 / Railroads (Class I)",
+    "industry": "铁路运输",
     "tickers": [
       "UNP",
       "CSX",
@@ -94,10 +130,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 铁路路权与沿线土地所有权绝对无法复制",
     "disruption_view": "根据牛顿力学与钢轮钢轨摩擦力原理，重载铁路是陆路长途大宗货运最具能效比的物理手段。大宗农产品、煤炭、化工品的跨大陆运输无可替代。",
-    "capacity_view": "北美一级铁路网在19世纪至20世纪初完成布局。在当今环境保护、土地征用成本极高的背景下，哪怕拥有无限主权财富基金，也绝无可能在全美再建一条平行铁路网。"
+    "capacity_view": "北美一级铁路网在19世纪至20世纪初完成布局。在当今环境保护、土地征用成本极高的背景下，哪怕拥有无限主权财富基金，也绝无可能在全美再建一条平行铁路网。",
+    "industry_en": "Railroads (Class I)",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — rail rights-of-way and adjacent land can't be replicated",
+    "moat_reason_en": "A physical right-of-way network linking North America's ports, grain belts, mines and chemical hubs. It uses about a quarter of the fuel of trucking per ton-mile and is irreplaceable infrastructure.",
+    "disruption_view_en": "Steel wheel on steel rail is the most energy-efficient way to move bulk freight long distances over land. Cross-continental shipments of grain, coal and chemicals have no substitute.",
+    "capacity_view_en": "North America's Class I network was laid out between the 19th and early 20th centuries. With today's environmental rules and land costs, even unlimited capital couldn't build a parallel national network."
   },
   {
-    "industry": "油服与能源开采核心设备 / Oilfield Services",
+    "industry": "油服与能源开采核心设备",
     "tickers": [
       "SLB",
       "HAL",
@@ -107,10 +149,16 @@
     "disruption_risk": "低",
     "capacity_barrier": "高 - 专利工具、深井耐高温高压材料与数字化地质解释壁垒",
     "disruption_view": "全球交通与化工原料的基础供需决定了石油天然气未来数十年仍将维持数千万桶/日的消费基准，上游老井增产与深海开采对专业油服工具具有绝对依赖性。",
-    "capacity_view": "高端旋转导向系统、超高温高压传感器和智能压裂车队具有深厚的技术专利封锁和极端工况可靠性背书，非专业玩家无法通过低端价格战夺取高端市场份额。"
+    "capacity_view": "高端旋转导向系统、超高温高压传感器和智能压裂车队具有深厚的技术专利封锁和极端工况可靠性背书，非专业玩家无法通过低端价格战夺取高端市场份额。",
+    "industry_en": "Oilfield Services",
+    "disruption_risk_en": "Low",
+    "capacity_barrier_en": "High — patented tools, high-pressure/high-temperature materials and digital subsurface expertise",
+    "moat_reason_en": "Mature oil and gas fields decline 6–8% a year and depend on advanced directional drilling, logging and completion technology. Through a decades-long energy transition, producing existing hydrocarbons remains a foundation of the global economy.",
+    "disruption_view_en": "Transport and petrochemical demand will keep oil and gas consumption at tens of millions of barrels a day for decades, and sustaining old wells and deep-water output depends on specialised oilfield tools.",
+    "capacity_view_en": "High-end rotary steerable systems, HPHT sensors and smart fracturing fleets are protected by patents and proven reliability in extreme conditions. Low-cost players can't win the high end on price."
   },
   {
-    "industry": "环保废弃物特许经营 / Waste Management",
+    "industry": "环保废弃物特许经营",
     "tickers": [
       "WM",
       "RSG"
@@ -119,10 +167,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 新建填埋场审批几乎处于永久冻结状态",
     "disruption_view": "物质守恒定律决定了人类实体消费必然产生物理废弃物。无论消费形态如何演变，物理垃圾的清运、填埋与再生处理是人类社会的不可或缺的基础刚需。",
-    "capacity_view": "地方政府几乎不再批准离核心人口圈更近的新填埋场，垃圾转运路线与填埋容积是受法律和地方环保条例严密保护的特许资产，外来资本无法低成本复制。"
+    "capacity_view": "地方政府几乎不再批准离核心人口圈更近的新填埋场，垃圾转运路线与填埋容积是受法律和地方环保条例严密保护的特许资产，外来资本无法低成本复制。",
+    "industry_en": "Waste Management",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — new landfill permits are practically frozen",
+    "moat_reason_en": "Daily life and commerce inevitably generate physical waste. Landfill siting faces strict EPA permitting and NIMBY opposition, so an approved landfill is close to a money machine.",
+    "disruption_view_en": "Conservation of mass means physical consumption always produces physical waste. However consumption evolves, collection, landfill and recycling remain essential services.",
+    "capacity_view_en": "Local governments rarely approve new landfills near population centres. Collection routes and landfill airspace are franchise assets protected by law and local rules, which outside capital can't cheaply replicate."
   },
   {
-    "industry": "化肥与农化刚需 / Fertilizer & Potash",
+    "industry": "化肥与农化刚需",
     "tickers": [
       "NTR",
       "MOS",
@@ -132,10 +186,16 @@
     "disruption_risk": "极低",
     "capacity_barrier": "极高 - 钾矿地理赋存垄断与合成氨天然气管道禀赋",
     "disruption_view": "植物生长必需氮磷钾三要素，这是生物化学与农学基本规律。没有合成氨与钾盐，全球农业单产将腰斩，人类将面临毁灭性饥荒，具有绝对的不可替代性。",
-    "capacity_view": "高质量可溶性钾盐矿仅分布于少数地质断裂带。Nutrien等巨头控制着全球最优成本曲线的开采权，任何新扩建项目均面临极高的资本开销与长期回报挑战。"
+    "capacity_view": "高质量可溶性钾盐矿仅分布于少数地质断裂带。Nutrien等巨头控制着全球最优成本曲线的开采权，任何新扩建项目均面临极高的资本开销与长期回报挑战。",
+    "industry_en": "Fertilizer & Potash",
+    "disruption_risk_en": "Very low",
+    "capacity_barrier_en": "Very high — potash geology is concentrated, and ammonia depends on gas-pipeline endowment",
+    "moat_reason_en": "The floor of food security for eight billion people. Potash deposits are concentrated in Saskatchewan; a new deep potash mine costs over $5B and takes 7–10 years.",
+    "disruption_view_en": "Plants require nitrogen, phosphorus and potassium — a basic law of biochemistry and agronomy. Without ammonia and potash, global crop yields would halve, so the inputs are irreplaceable.",
+    "capacity_view_en": "Quality soluble potash sits in only a few geological formations. Leaders like Nutrien control the lowest-cost reserves, and any new expansion faces huge capital costs and long payback periods."
   },
   {
-    "industry": "远洋干散货与特种海运 / Maritime Shipping",
+    "industry": "远洋干散货与特种海运",
     "tickers": [
       "SBLK",
       "GOGL",
@@ -145,10 +205,16 @@
     "disruption_risk": "低",
     "capacity_barrier": "高 - 全球造船船坞排期紧俏，环保碳减排法规倒逼运力出清",
     "disruption_view": "水上浮力与流体阻力物理优势使巨型散货船成为跨洋搬运铁矿石、铝土矿、谷物唯一具备经济可行性的手段，没有任何航天或陆运手段能替代海运大宗物流。",
-    "capacity_view": "当前全球造船厂正处于高利润高等级船型的满产周期，低散货船新接订单率低。加之老旧船舶拆解与环保脱碳新规，整体运力增长极度受抑，利好行业龙头。"
+    "capacity_view": "当前全球造船厂正处于高利润高等级船型的满产周期，低散货船新接订单率低。加之老旧船舶拆解与环保脱碳新规，整体运力增长极度受抑，利好行业龙头。",
+    "industry_en": "Maritime Shipping",
+    "disruption_risk_en": "Low",
+    "capacity_barrier_en": "High — shipyard slots are booked up and decarbonisation rules force old tonnage out",
+    "moat_reason_en": "Carries over 90% of international commodity trade. Global shipyard slots are filled with container and LNG ships into 2028, while IMO carbon rules force slower steaming and tighter dry-bulk capacity.",
+    "disruption_view_en": "Buoyancy and hydrodynamics make giant bulk carriers the only economical way to move iron ore, bauxite and grain across oceans; no air or land mode can replace seaborne bulk logistics.",
+    "capacity_view_en": "Shipyards are fully booked with higher-margin vessel types, so new dry-bulk orders are low. Combined with scrapping of old ships and decarbonisation rules, fleet growth is heavily constrained, favouring the leaders."
   },
   {
-    "industry": "通信网络设备与标准专利(SEP) / Telecom & Wireless Infrastructure",
+    "industry": "通信网络设备与标准专利(SEP)",
     "tickers": [
       "NOK",
       "ERIC",
@@ -161,10 +227,16 @@
     "disruption_risk": "低 - 基础物理电磁波通信协议与全球蜂窝网络不可替代",
     "capacity_barrier": "极高 - 数十年数百亿研发积累的标准必要专利池，全球仅极少数寡头准入",
     "disruption_view": "全球移动通信与万物互联基于基础电磁波物理原理，无论AI或应用层如何演化，底层无线接入网(RAN)和核心光传送网设备不可被纯软件替代。诺基亚不仅提供基站硬件，更是全球5G标准基础专利持有者，技术生命周期跨越数十年。",
-    "capacity_view": "全球电信运营商级基站与网络基础设施市场已被西方诺基亚/爱立信双寡头与华为瓜分，欧美及盟国出于国家安全考量严格排他。新玩家绝无可能在资本内卷中绕过庞大的通信专利网和极其严苛的运营商准入测试。"
+    "capacity_view": "全球电信运营商级基站与网络基础设施市场已被西方诺基亚/爱立信双寡头与华为瓜分，欧美及盟国出于国家安全考量严格排他。新玩家绝无可能在资本内卷中绕过庞大的通信专利网和极其严苛的运营商准入测试。",
+    "industry_en": "Telecom & Wireless Infrastructure",
+    "disruption_risk_en": "Low — radio-wave communication protocols and cellular networks are irreplaceable",
+    "capacity_barrier_en": "Very high — standard-essential patent pools built over decades and billions of R&D; only a few players qualify",
+    "moat_reason_en": "5G/6G standard-essential patents (SEPs) and core carrier network equipment. Nokia and Cisco hold top-tier patent portfolios and physical networks, and every handset and base-station maker must pay unavoidable royalties.",
+    "disruption_view_en": "Mobile communications and IoT rest on electromagnetic physics. However AI and applications evolve, radio access networks (RAN) and core optical transport can't be replaced by software alone. Nokia is both a hardware supplier and a holder of foundational 5G patents, with technology lifecycles spanning decades.",
+    "capacity_view_en": "Carrier-grade network infrastructure is split between the Nokia/Ericsson duopoly and Huawei, and Western countries exclude vendors on national-security grounds. Newcomers can't bypass the patent thicket and strict carrier qualification testing."
   },
   {
-    "industry": "清洁电力与燃料电池 / Clean Power & Fuel Cells",
+    "industry": "清洁电力与燃料电池",
     "tickers": [
       "BE",
       "SMR",
@@ -176,10 +248,16 @@
     "disruption_risk": "低 - 物理高能效电化学转化与现场分布式供电刚需",
     "capacity_barrier": "高 - 固体氧化物高温陶瓷电解质与系统集成专利",
     "disruption_view": "Bloom Energy的固体氧化物燃料电池技术直接将天然气或氢气通过电化学氧化发电，发电效率高达60%+，且无需等待传统电网5-7年的排期审批，直接在数据中心现场供电。随着AI电力饥渴，现场可靠基荷电源不可或缺。",
-    "capacity_view": "高温SOFC材料在超700°C工况下的热应力疲劳与耐磨蚀涂层具备极高材料学壁垒，研发周期超20年。新进入者很难在短期内跨越百万小时可靠性运行测试与规模化量产成本门槛。"
+    "capacity_view": "高温SOFC材料在超700°C工况下的热应力疲劳与耐磨蚀涂层具备极高材料学壁垒，研发周期超20年。新进入者很难在短期内跨越百万小时可靠性运行测试与规模化量产成本门槛。",
+    "industry_en": "Clean Power & Fuel Cells",
+    "disruption_risk_en": "Low — efficient electrochemical conversion and on-site power are needed",
+    "capacity_barrier_en": "High — high-temperature ceramic electrolyte and system-integration patents",
+    "moat_reason_en": "AI data centres are outrunning grid capacity, making solid-oxide fuel cells (SOFC) and microgrids an on-site, plug-in solution for low- or zero-carbon baseload power.",
+    "disruption_view_en": "Bloom Energy's SOFCs turn natural gas or hydrogen into electricity electrochemically at 60%+ efficiency, powering data centres on site without waiting 5–7 years for a grid connection. As AI drives power demand, reliable on-site baseload becomes essential.",
+    "capacity_view_en": "High-temperature SOFC materials must survive thermal fatigue and corrosion above 700°C, a materials-science barrier built over 20+ years. Newcomers struggle to clear million-hour reliability testing and mass-production cost curves."
   },
   {
-    "industry": "半导体先进制程与硬件制造 / Semiconductors & Hardware",
+    "industry": "半导体先进制程与硬件制造",
     "tickers": [
       "ASML",
       "TSM",
@@ -194,10 +272,16 @@
     "disruption_risk": "极低 - 硅基微电子学与半导体物理定律无可替代",
     "capacity_barrier": "极高 - 单台光刻机超2亿美元，先进制程晶圆厂投资超200亿美元",
     "disruption_view": "从大模型推理到日常电子产品，一切算力与存储必须运行在物理半导体晶体管之上。阿斯麦的光刻设备与台积电的先进制程是全球计算架构的唯一物理载体。",
-    "capacity_view": "光刻光学镜片、超精密机械伺服与EDA生态被少数几家企业绝对垄断。即便国家主权资本砸入数千亿，也很难在10年内复现EUV光刻体系或成熟的先进制程良率曲线。"
+    "capacity_view": "光刻光学镜片、超精密机械伺服与EDA生态被少数几家企业绝对垄断。即便国家主权资本砸入数千亿，也很难在10年内复现EUV光刻体系或成熟的先进制程良率曲线。",
+    "industry_en": "Semiconductors & Hardware",
+    "disruption_risk_en": "Very low — silicon microelectronics and semiconductor physics have no substitute",
+    "capacity_barrier_en": "Very high — a single EUV tool costs over $200M; a leading-edge fab costs over $20B",
+    "moat_reason_en": "The physical foundation of the digital world. EUV lithography and 3nm/2nm foundry processes are the peak of precision engineering, protected by physical limits and geopolitics.",
+    "disruption_view_en": "From model inference to everyday devices, all compute and storage run on physical transistors. ASML's lithography tools and TSMC's leading-edge processes are the only physical carriers of the world's computing architecture.",
+    "capacity_view_en": "Lithography optics, ultra-precise motion control and the EDA ecosystem are controlled by a handful of firms. Even hundreds of billions in state capital would struggle to recreate the EUV stack or mature leading-edge yields within a decade."
   },
   {
-    "industry": "企业核心软件与底层数据库 / Enterprise Infrastructure & Database",
+    "industry": "企业核心软件与底层数据库",
     "tickers": [
       "MSFT",
       "ORCL",
@@ -213,10 +297,16 @@
     "disruption_risk": "低 - 核心业务数据流与合规中枢极难被推倒重构",
     "capacity_barrier": "极高 - 数十年沉淀的企业定制化工作流与生态飞轮",
     "disruption_view": "企业级数据库与核心业务ERP是现代商业运转的中枢神经。虽然上层应用形态多变，但底层结构化财务、供应链与安全审计数据必须运行在久经考验的高可靠系统之上，不可轻言替代。",
-    "capacity_view": "甲骨文、微软等平台凭借数十年的企业内部深度嵌入，构建了深不可测的转换成本壁垒。哪怕有免费开源竞品，跨国大企业管理层出于风控和合规考量也绝不会轻易更换底层系统。"
+    "capacity_view": "甲骨文、微软等平台凭借数十年的企业内部深度嵌入，构建了深不可测的转换成本壁垒。哪怕有免费开源竞品，跨国大企业管理层出于风控和合规考量也绝不会轻易更换底层系统。",
+    "industry_en": "Enterprise Infrastructure & Database",
+    "disruption_risk_en": "Low — core transaction and compliance systems are very hard to rip out",
+    "capacity_barrier_en": "Very high — decades of customised enterprise workflows and ecosystem flywheels",
+    "moat_reason_en": "The transaction ledgers, ERP and security backbone of the Fortune 500. Migrating core data costs tens of millions of dollars and risks crippling outages, so retention exceeds 95%.",
+    "disruption_view_en": "Enterprise databases and core ERP are the central nervous system of modern business. Applications change, but structured financial, supply-chain and security-audit data must live on proven, highly reliable systems that aren't lightly replaced.",
+    "capacity_view_en": "Oracle, Microsoft and peers are embedded deep inside enterprises after decades, creating enormous switching costs. Even against free open-source alternatives, large multinationals rarely swap core systems for risk and compliance reasons."
   },
   {
-    "industry": "医疗器械与核心制药 / Healthcare, MedTech & Pharma",
+    "industry": "医疗器械与核心制药",
     "tickers": [
       "LLY",
       "NVO",
@@ -229,10 +319,16 @@
     "disruption_risk": "极低 - 生物学机理与精密微创外科手术不可替代",
     "capacity_barrier": "极高 - 10-15年临床试验周期与数万外科医生培训使用习惯锁定",
     "disruption_view": "无论科技如何发展，实体人类治愈疾病、延年益寿的生物学需求永恒存在。微创手术器械与高特异性生物靶向药基于分子生物学和人体解剖学，具有终极抗颠覆性。",
-    "capacity_view": "外科手术系统拥有极其深厚的外科医生操作习惯壁垒与医院资本投入粘性。新药与新器械需经历长达10年、耗资数十亿美元的多中心双盲临床与FDA审核，资本突击扩产无法绕过监管科学验证。"
+    "capacity_view": "外科手术系统拥有极其深厚的外科医生操作习惯壁垒与医院资本投入粘性。新药与新器械需经历长达10年、耗资数十亿美元的多中心双盲临床与FDA审核，资本突击扩产无法绕过监管科学验证。",
+    "industry_en": "Healthcare, MedTech & Pharma",
+    "disruption_risk_en": "Very low — biology and minimally invasive surgery have no substitute",
+    "capacity_barrier_en": "Very high — 10–15 year clinical trials and the trained habits of thousands of surgeons",
+    "moat_reason_en": "Human health is a permanent need. The da Vinci surgical robot and blockbuster drugs like GLP-1s are protected by multi-phase FDA approval and up to 20 years of patent life.",
+    "disruption_view_en": "However technology advances, the biological need to cure disease and extend life persists. Minimally invasive surgical devices and highly targeted drugs rest on molecular biology and anatomy, making them very hard to disrupt.",
+    "capacity_view_en": "Surgical systems benefit from deep surgeon training habits and hospital capital commitments. New drugs and devices need about a decade and billions of dollars in multi-centre trials and FDA review — capital can't shortcut regulatory science."
   },
   {
-    "industry": "高端制造、重卡与农机 / Heavy Machinery & Industrial",
+    "industry": "高端制造、重卡与农机",
     "tickers": [
       "CAT",
       "DE",
@@ -244,10 +340,16 @@
     "disruption_risk": "极低 - 物理挖掘、重力搬运与土地耕作必须依赖重型机械",
     "capacity_barrier": "高 - 全球特许经销商服务网络与重卡动力总成专利",
     "disruption_view": "牛顿力学与物理功耗决定了长距离大型矿山剥离、道路铺设与农作物大规模收割必须使用大型钢铁动力机械。虚拟技术无法代替物理世界的土石方工程。",
-    "capacity_view": "卡特彼勒与迪尔的核心壁垒不仅在钢铁制造，更在于经营近百年的全球经销商专营网络与24小时零件到场售后能力，外来资本无法低成本复制该服务网络。"
+    "capacity_view": "卡特彼勒与迪尔的核心壁垒不仅在钢铁制造，更在于经营近百年的全球经销商专营网络与24小时零件到场售后能力，外来资本无法低成本复制该服务网络。",
+    "industry_en": "Heavy Machinery & Industrial",
+    "disruption_risk_en": "Very low — excavation, hauling and farming need heavy machinery",
+    "capacity_barrier_en": "High — global franchised dealer service networks and powertrain patents",
+    "moat_reason_en": "The steel backbone of global infrastructure, mining and modern farming. Exclusive independent dealer networks span the globe, and used equipment holds high residual value.",
+    "disruption_view_en": "Newtonian mechanics and energy requirements mean large-scale mine stripping, road building and harvesting need heavy powered machinery; virtual technology can't move earth.",
+    "capacity_view_en": "Caterpillar's and Deere's core moat isn't only manufacturing but nearly a century of exclusive dealer networks and 24-hour parts and service, which outside capital can't cheaply replicate."
   },
   {
-    "industry": "平台网络效应与消费护城河 / Consumer & Platform Network Moats",
+    "industry": "平台网络效应与消费护城河",
     "tickers": [
       "SONY",
       "MCD",
@@ -259,6 +361,12 @@
     "disruption_risk": "低 - 独特IP版权、心智烙印与线下核心物理商圈地产垄断",
     "capacity_barrier": "高 - 百年品牌心智与全球分销网络",
     "disruption_view": "顶级消费品牌和平台如索尼(PS游戏+音乐影视内容生态)、麦当劳(全球核心商业地产与标准化餐饮系统)受品牌护城河与线下物理位置严格锁定，非纯数字技术可颠覆。",
-    "capacity_view": "消费者心智沉淀与全球黄金地段特许经营网络无法通过简单扩建工厂来替代，竞争对手很难短期砸钱复制这种全渠道影响力。"
+    "capacity_view": "消费者心智沉淀与全球黄金地段特许经营网络无法通过简单扩建工厂来替代，竞争对手很难短期砸钱复制这种全渠道影响力。",
+    "industry_en": "Consumer & Platform Network Moats",
+    "disruption_risk_en": "Low — unique IP, brand imprint and prime physical real estate",
+    "capacity_barrier_en": "High — century-old brand equity and global distribution networks",
+    "moat_reason_en": "Mindshare among hundreds of millions of consumers, exclusive content IP or global two-sided network effects. Brands are very expensive to rebuild and generate strong free cash flow.",
+    "disruption_view_en": "Top consumer brands and platforms — Sony (PlayStation plus music and film content) and McDonald's (prime real estate and a standardised restaurant system) — are anchored by brand moats and physical locations that purely digital technology can't easily disrupt.",
+    "capacity_view_en": "Consumer mindshare and franchise networks on prime sites can't be replaced by simply building more factories; rivals can't quickly buy this kind of omnichannel reach."
   }
 ]

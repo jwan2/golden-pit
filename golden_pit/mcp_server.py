@@ -13,17 +13,19 @@ from . import __version__, universe
 from .compact import compact
 from .config import Settings
 from .engine import Engine
+from .i18n import render
 from .scoring import TIERS
 
 INSTRUCTIONS = """Golden Pit finds US stocks where a *quality* company is *genuinely* in a price pit.
 A stock is a "golden_pit" only if BOTH the quality gate (financial 4/5, management 2/3) AND the pit
 condition (>=30% below 52-week high plus a valuation anchor) pass. Missing data is "unknown" and never
 counts as a pass. Results are research aids, not investment advice. Quote numbers exactly as returned;
-do not invent figures. 结论与理由均为中文。"""
+do not invent figures. Output language follows GOLDEN_PIT_LANG (zh or en)."""
 
 
 def build_tools(engine: Engine) -> dict:
     """返回 {name: function}。单独拆出来便于测试，也便于兼容不同版本的 MCP SDK。"""
+    lang = engine.settings.lang
 
     def scan_stocks(mode: str = "curated", tickers: Optional[list[str]] = None) -> dict:
         """Run a scan and save it. mode: "curated" (82 high-moat names), "live" (Yahoo screener of
@@ -33,9 +35,9 @@ def build_tools(engine: Engine) -> dict:
         if mode not in ("live", "curated", "custom"):
             return {"error": "mode must be live, curated or custom"}
         scan = engine.scanner.run_sync(mode, tickers or [], "mcp")
-        return {"finished_at": scan["finished_at"], "universe": scan["universe"]["note"],
-                "summary": {TIERS[k]["label"]: n for k, n in scan["summary"].items() if n},
-                "results": [compact(r, detail=False) for r in scan["results"]]}
+        return render({"finished_at": scan["finished_at"], "universe": scan["universe"]["note"],
+                       "summary": {k: n for k, n in scan["summary"].items() if n},
+                       "results": [compact(r, detail=False, lang=lang) for r in scan["results"]]}, lang)
 
     def analyze_stock(ticker: str) -> dict:
         """Analyze one US stock now: verdict with reasons, all 11 checks (value / rule / status),
@@ -43,7 +45,7 @@ def build_tools(engine: Engine) -> dict:
         t = universe.parse_tickers([ticker])
         if not t:
             return {"error": f"invalid ticker: {ticker}"}
-        return compact(engine.analyze(t[0]))
+        return compact(engine.analyze(t[0]), lang=lang)
 
     def latest_results(tier: Optional[str] = None, limit: int = 20) -> dict:
         """Read the most recent saved scan. tier filter: golden_pit, quality_wait, value_trap, fail,
@@ -52,14 +54,14 @@ def build_tools(engine: Engine) -> dict:
         if not scan:
             return {"error": "no scan yet — call scan_stocks first"}
         rows = [r for r in scan["results"] if not tier or r["verdict"]["tier"] == tier]
-        return {"finished_at": scan["finished_at"], "universe": scan["universe"]["note"],
-                "changes_vs_previous": scan.get("changes"),
-                "results": [compact(r, detail=False) for r in rows[: max(1, min(limit, 100))]]}
+        return render({"finished_at": scan["finished_at"], "universe": scan["universe"]["note"],
+                       "changes_vs_previous": scan.get("changes"),
+                       "results": [compact(r, detail=False, lang=lang) for r in rows[: max(1, min(limit, 100))]]}, lang)
 
     def track_record() -> dict:
         """Forward-tracking performance of every past golden_pit call versus SPY (price return).
         Small samples are not statistically meaningful — say so when reporting."""
-        rep = engine.track_report()
+        rep = render(engine.track_report(), lang)
         return {"summary": rep["summary"], "caveat": rep["caveat"], "benchmark": rep["benchmark"],
                 "recent": [{k: e.get(k) for k in ("ticker", "status", "flagged_at", "flag_price", "last_price",
                                                    "return_since_pct", "excess_since_pct", "days")}
@@ -67,7 +69,7 @@ def build_tools(engine: Engine) -> dict:
 
     def methodology() -> dict:
         """Explain the rules and the current thresholds."""
-        return {"tiers": TIERS, "thresholds": engine.thresholds.to_dict(), "principles": INSTRUCTIONS}
+        return {"tiers": render(TIERS, lang), "thresholds": engine.thresholds.to_dict(), "principles": INSTRUCTIONS}
 
     return {f.__name__: f for f in (scan_stocks, analyze_stock, latest_results, track_record, methodology)}
 

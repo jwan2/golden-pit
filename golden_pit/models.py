@@ -73,11 +73,12 @@ class RawStock:
 
 @dataclass
 class Check:
+    # label / display / rule / note 是 str 或 i18n 消息（dict），输出时再渲染
     key: str
-    label: str
+    label: Any
     group: str                   # financial | management | valuation
     status: str                  # PASS / FAIL / UNKNOWN / NA
     value: Optional[float]
-    display: str                 # 给人看的值，如 "3.4x"、"−6.5%"
-    rule: str                    # 给人看的规则，如 "≥ 2.0x"
-    note: str = ""
+    display: Any                 # 给人看的值，如 "3.4x"、"−6.5%"
+    rule: Any                    # 给人看的规则，如 "≥ 2.0x"
+    note: Any = ""

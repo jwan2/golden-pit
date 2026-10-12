@@ -22,6 +22,8 @@ from pathlib import Path
 from statistics import median
 from typing import Callable, Optional
 
+from .i18n import M
+
 BENCHMARK = "SPY"
 MIN_DAYS_FOR_STATS = 7   # 追踪不足 7 天的记录只展示、不计入统计（当天收益恒为 0，会污染胜率）
 
@@ -121,7 +123,7 @@ class Tracker:
                 "mature_90d": len(mature),
                 "min_days_for_stats": MIN_DAYS_FOR_STATS,
             },
-            "caveat": f"前向追踪，价格收益不含股息；追踪满 {MIN_DAYS_FOR_STATS} 天才计入统计；样本少、时间短时结论没有统计意义（建议至少 30 个样本、持有 90 天以上再看）。",
+            "caveat": M("track.caveat", days=MIN_DAYS_FOR_STATS),
         }
 
 

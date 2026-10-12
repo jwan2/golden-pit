@@ -6,6 +6,7 @@ import pytest
 from golden_pit import ai, analyze
 from golden_pit.ai import AIConfig, AIError, AIService
 from golden_pit.config import Thresholds
+from golden_pit.i18n import render
 from golden_pit.plan import entry_plan
 from tests.conftest import healthy_raw
 
@@ -40,7 +41,8 @@ def test_plan_follows_configured_threshold():
 # ---------------- AI 校验
 def test_valid_response_parses_even_with_markdown_noise():
     out = ai.parse_and_validate("好的：\n```json\n" + json.dumps(GOOD, ensure_ascii=False) + "\n```")
-    assert out["pit_type_label"] == "周期性低谷" and out["agree_label"] == "同意量化结论"
+    assert render(out["pit_type_label"], "zh") == "周期性低谷" and render(out["agree_label"], "zh") == "同意量化结论"
+    assert render(out["pit_type_label"], "en") == "Cyclical trough"
 
 
 @pytest.mark.parametrize("bad", [
@@ -60,8 +62,10 @@ def test_fields_are_truncated_and_controls_stripped():
 
 
 def test_prompt_contains_snapshot_and_guardrails():
-    p = ai.build_prompt(ai.build_snapshot(result()))
+    p = ai.build_prompt(ai.build_snapshot(result(), "zh"), "zh")
     assert "不得编造" in p and "不给买卖指令" in p and "AAA" in p and "利息保障倍数" in p
+    e = ai.build_prompt(ai.build_snapshot(result(), "en"), "en")
+    assert "Never invent" in e and "No buy/sell" in e and "Interest coverage" in e and "利息" not in e
 
 
 def test_snapshot_cleans_hostile_company_name():
@@ -94,7 +98,7 @@ def test_generate_caches_and_detects_staleness(tmp_path):
 
 def test_disabled_provider_raises(tmp_path):
     svc, _ = make_service(tmp_path, provider="none")
-    with pytest.raises(AIError, match="未启用"):
+    with pytest.raises(AIError, match="not enabled"):
         svc.generate(result())
 
 

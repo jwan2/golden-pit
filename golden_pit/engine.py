@@ -42,6 +42,6 @@ class Engine:
         picks = [r for r in scan["results"] if r["verdict"]["tier"] in ("golden_pit", "quality_wait")]
         for r in picks[: self.ai.cfg.auto_top]:
             try:
-                self.ai.generate(r)
+                self.ai.generate(r, self.settings.lang)
             except AIError:
                 continue

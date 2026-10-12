@@ -1,14 +1,19 @@
-"""命令行入口：golden-pit serve | scan | analyze | track | mcp"""
+"""命令行入口：golden-pit serve | scan | analyze | track | mcp
+
+语言：--lang zh|en > GOLDEN_PIT_LANG > 系统区域设置。
+"""
 from __future__ import annotations
 
 import argparse
 import json
 import sys
 import unicodedata
+from dataclasses import replace
 
 from . import __version__, universe
 from .compact import compact
 from .config import Settings
+from .i18n import env_lang, normalize_lang, render, tr
 
 STATUS_ICON = {"pass": "✓", "fail": "✗", "unknown": "?", "na": "–"}
 
@@ -32,12 +37,12 @@ def _pad(s, width: int, right: bool = False) -> str:
     return " " * gap + s if right else s + " " * gap
 
 
-def print_table(results: list[dict]) -> None:
-    cols = [("代码", 6, False), ("结论", 14, False), ("现价", 9, True), ("回撤", 7, True),
-            ("财务", 5, True), ("管理层", 6, True), ("未知", 4, True), ("走势", 8, False), ("公司", 0, False)]
-    print("  ".join(_pad(n, w, r) for n, w, r in cols).rstrip())
+def print_table(results: list[dict], lang: str) -> None:
+    cols = [("ticker", 6, False), ("verdict", 18, False), ("price", 9, True), ("drop", 7, True),
+            ("fin", 9, True), ("mgmt", 10, True), ("unknown", 7, True), ("timing", 10, False), ("company", 0, False)]
+    print("  ".join(_pad(tr(f"cli.col.{n}", lang), w, r) for n, w, r in cols).rstrip())
     for r in results:
-        c = compact(r, detail=False)
+        c = compact(r, detail=False, lang=lang)
         drop = "—" if c["drop_from_52w_high_pct"] is None else f"{c['drop_from_52w_high_pct']:.1f}%"
         price = "—" if c["price"] is None else f"{c['price']:.2f}"
         row = [c["ticker"], c["verdict"], price, drop, c["financial_pass"], c["management_pass"],
@@ -45,64 +50,73 @@ def print_table(results: list[dict]) -> None:
         print("  ".join(_pad(v, w, rt) for v, (_, w, rt) in zip(row, cols)).rstrip())
 
 
-def print_detail(r: dict) -> None:
-    c = compact(r)
-    print(f"\n{c['ticker']}  {c['name']}  —  【{c['verdict']}】")
+def print_detail(r: dict, lang: str) -> None:
+    c = compact(r, lang=lang)
+    print(f"\n{c['ticker']}  {c['name']}  —  [{c['verdict']}]")
     if c["error"]:
-        print("  " + c["error"])
+        print("  " + str(c["error"]))
         return
-    print(f"  现价 {c['price']} {c['currency']} · 距 52 周高点回撤 {c['drop_from_52w_high_pct']}% · 走势：{c['timing']}")
-    print("\n为什么：")
+    print("  " + tr("cli.price_line", lang, price=c["price"], ccy=c["currency"],
+                    drop=c["drop_from_52w_high_pct"], timing=c["timing"]))
+    print("\n" + tr("cli.why", lang))
     for line in c["reasons"]:
         print("  " + line)
     if c["timing_reason"]:
-        print(f"  走势：{c['timing_reason']}")
-    print("\n指标：")
+        print("  " + tr("cli.timing", lang, r=c["timing_reason"]))
+    print("\n" + tr("cli.checks", lang))
+    needs = tr("cli.needs", lang)
     for ck in c["checks"]:
-        note = f"  （{ck['note']}）" if ck["note"] else ""
-        print(f"  {STATUS_ICON[ck['status']]} {_pad(ck['label'], 18)} {_pad(ck['display'], 16)} 要求 {ck['rule']}{note}")
+        note = f"  ({ck['note']})" if ck["note"] else ""
+        print(f"  {STATUS_ICON[ck['status']]} {_pad(ck['label'], 26)} {_pad(ck['display'], 18)} {needs} {ck['rule']}{note}")
     if c["entry_plan"] and c["tier"] in ("golden_pit", "quality_wait"):
-        print("\n分批价位（参考模板，非建议）：")
+        print("\n" + tr("cli.plan", lang))
         for lv in c["entry_plan"]:
-            print(f"  -{lv['drop_pct']:.0f}%  ${lv['price']:.2f}  占比 {lv['weight_pct']}%  {'✓ 已到达' if lv['reached'] else ''}")
+            reached = tr("cli.reached", lang) if lv["reached"] else ""
+            print(f"  -{lv['drop_pct']:.0f}%  ${lv['price']:.2f}  {tr('cli.weight', lang)} {lv['weight_pct']}%  {reached}")
     for w in c["warnings"]:
         print(f"\n⚠ {w}")
     if c["moat_view"]:
-        print(f"\n行业观点（人工知识库，不计分）：{c['moat_view']}")
+        print("\n" + tr("cli.moat", lang, v=c["moat_view"]))
 
 
 def main(argv: list[str] | None = None) -> None:
     _utf8_stdio()
-    p = argparse.ArgumentParser(prog="golden-pit", description="美股黄金坑助手：质量门槛 × 坑位条件，缺失数据绝不当作通过。")
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--lang")
+    known, _ = pre.parse_known_args(argv)
+    lang = normalize_lang(known.lang) if known.lang else env_lang()
+
+    p = argparse.ArgumentParser(prog="golden-pit", description=tr("cli.desc", lang))
     p.add_argument("--version", action="version", version=f"golden-pit {__version__}")
+    p.add_argument("--lang", choices=["zh", "en"], help=tr("cli.h.lang", lang))
     sub = p.add_subparsers(dest="cmd")
 
-    s = sub.add_parser("serve", help="启动网页（默认 http://127.0.0.1:5000）")
+    s = sub.add_parser("serve", help=tr("cli.h.serve", lang))
     s.add_argument("--host")
     s.add_argument("--port", type=int)
 
-    s = sub.add_parser("scan", help="运行一次扫描并保存结果")
-    s.add_argument("tickers", nargs="*", help="自定义代码（给了代码就是 custom 模式）")
+    s = sub.add_parser("scan", help=tr("cli.h.scan", lang))
+    s.add_argument("tickers", nargs="*", help=tr("cli.h.tickers", lang))
     s.add_argument("--mode", choices=["live", "curated", "custom"])
-    s.add_argument("--json", action="store_true", help="输出 JSON")
+    s.add_argument("--json", action="store_true", help=tr("cli.h.json", lang))
 
-    s = sub.add_parser("analyze", help="即时分析单只股票（不保存）")
+    s = sub.add_parser("analyze", help=tr("cli.h.analyze", lang))
     s.add_argument("ticker")
-    s.add_argument("--json", action="store_true")
+    s.add_argument("--json", action="store_true", help=tr("cli.h.json", lang))
 
-    sub.add_parser("track", help="查看战绩追踪（前向验证）")
-    sub.add_parser("mcp", help="以 MCP server 方式运行（stdio），供 Claude Code 等 AI 客户端调用")
+    sub.add_parser("track", help=tr("cli.h.track", lang))
+    sub.add_parser("mcp", help=tr("cli.h.mcp", lang))
 
     args = p.parse_args(argv)
-    settings = Settings.from_env()
+    settings = replace(Settings.from_env(), lang=lang)
 
     if args.cmd in (None, "serve"):
-        from dataclasses import replace
         from .server import create_app
         settings = replace(settings, host=getattr(args, "host", None) or settings.host,
                            port=getattr(args, "port", None) or settings.port)
-        print(f"Golden Pit {__version__} → http://{settings.host}:{settings.port}  数据目录 {settings.data_dir}"
-              f"（管理员令牌：{'已配置' if settings.admin_token else '未配置，仅本机可操作'}）")
+        tok = tr("cli.tok_set" if settings.admin_token else "cli.tok_unset", lang)
+        print(tr("cli.serve", lang, v=__version__, host=settings.host, port=settings.port,
+                 dir=settings.data_dir, tok=tok))
         create_app(settings).run(host=settings.host, port=settings.port, threaded=True)
         return
 
@@ -117,29 +131,32 @@ def main(argv: list[str] | None = None) -> None:
     if args.cmd == "scan":
         mode = "custom" if args.tickers else (args.mode or "curated")
         tickers = universe.parse_tickers(args.tickers) if args.tickers else []
-        print(f"扫描中（{mode}）… 首次运行需要抓取数据，之后有缓存会快很多", file=sys.stderr)
+        print(tr("cli.scanning", lang, mode=mode), file=sys.stderr)
         scan = engine.scanner.run_sync(mode, tickers, "cli")
         if args.json:
-            print(json.dumps({**scan, "results": [compact(r) for r in scan["results"]]}, ensure_ascii=False, indent=1))
+            body = render({**scan, "results": []}, lang)
+            body["results"] = [compact(r, lang=lang) for r in scan["results"]]
+            print(json.dumps(body, ensure_ascii=False, indent=1))
             return
-        print(f"\n{scan['universe']['note']} · 完成于 {scan['finished_at']}\n")
-        print_table(scan["results"])
-        print(f"\n黄金坑 {scan['summary']['golden_pit']} 只。详情：golden-pit analyze <代码>，或 golden-pit serve 打开网页。")
+        print("\n" + tr("cli.done", lang, note=scan["universe"]["note"], time=scan["finished_at"]) + "\n")
+        print_table(scan["results"], lang)
+        print("\n" + tr("cli.golden", lang, n=scan["summary"]["golden_pit"]))
     elif args.cmd == "analyze":
         r = engine.analyze(args.ticker)
         if args.json:
-            print(json.dumps(compact(r), ensure_ascii=False, indent=1))
+            print(json.dumps(compact(r, lang=lang), ensure_ascii=False, indent=1))
         else:
-            print_detail(r)
+            print_detail(r, lang)
     elif args.cmd == "track":
-        rep = engine.track_report()
+        rep = render(engine.track_report(), lang)
         s = rep["summary"]
-        print(f"追踪 {s['total']} 条（仍在坑里 {s['open']}），满 90 天的 {s['mature_90d']} 条。基准 {rep['benchmark']}。")
-        for key, label in (("return_since", "入选至今收益"), ("excess_since", "入选至今超额"), ("excess_during", "入选期间超额")):
+        print(tr("cli.track_head", lang, total=s["total"], open=s["open"], mature=s["mature_90d"], bench=rep["benchmark"]))
+        for key in ("return_since", "excess_since", "excess_during"):
             st = s[key]
             if st["n"]:
-                print(f"  {label}：均值 {st['mean']:+.2f}%  中位数 {st['median']:+.2f}%  胜率 {st['win_rate']}%  (n={st['n']})")
-        print(f"\n{rep['caveat']}")
+                print(tr("cli.stat", lang, label=tr(f"cli.stat.{key}", lang), mean=f"{st['mean']:+.2f}%",
+                         median=f"{st['median']:+.2f}%", win=st["win_rate"], n=st["n"]))
+        print("\n" + rep["caveat"])
 
 
 if __name__ == "__main__":

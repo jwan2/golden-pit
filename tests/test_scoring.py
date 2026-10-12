@@ -1,6 +1,7 @@
 """判定层：重点验证"没跌的股票不可能是黄金坑"。"""
 from golden_pit import analyze
 from golden_pit.config import Thresholds
+from golden_pit.i18n import render
 from golden_pit.scanner import diff_scans
 from golden_pit.scoring import TIER_ORDER
 
@@ -78,7 +79,8 @@ def test_financial_company_is_not_applicable(mutate):
 def test_verdict_explains_itself(mutate):
     r = mutate(lambda r: r.info.update({"fiftyTwoWeekHigh": 105.0}))
     reasons = analyze.analyze_raw(r, TH)["verdict"]["reasons"]
-    assert any("不在坑里" in x for x in reasons)
+    assert any("不在坑里" in x for x in render(reasons, "zh"))
+    assert any("not in a pit" in x for x in render(reasons, "en"))
 
 
 def test_sort_key_orders_tiers_then_quality_then_drawdown(mutate):
@@ -89,7 +91,7 @@ def test_sort_key_orders_tiers_then_quality_then_drawdown(mutate):
 
 def test_error_result_has_error_tier():
     r = analyze.analyze_ticker("ZZZZ", TH, fetch=lambda t: (_ for _ in ()).throw(RuntimeError("boom")))
-    assert r["verdict"]["tier"] == "error" and "boom" in r["error"]
+    assert r["verdict"]["tier"] == "error" and "boom" in render(r["error"], "en")
 
 
 def test_diff_scans():

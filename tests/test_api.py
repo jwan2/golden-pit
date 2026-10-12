@@ -20,7 +20,8 @@ def make_settings(tmp_path, token=""):
 def fake_fetch(ticker):
     if ticker == "BAD":
         from golden_pit.providers.yahoo import FetchError
-        raise FetchError("BAD：没有行情数据")
+        from golden_pit.i18n import M
+        raise FetchError(M("err.no_quote", t="BAD"))
     r = healthy_raw(ticker)
     if ticker == "FLAT":
         r.info["fiftyTwoWeekHigh"] = 101.0
@@ -67,9 +68,11 @@ def test_scan_end_to_end_and_exports(app):
 
     c = app.test_client()
     assert c.get("/api/scan/latest").get_json()["scan"]["scan_id"] == scan["scan_id"]
-    csv = c.get("/api/export.csv").data.decode("utf-8-sig")
+    csv = c.get("/api/export.csv?lang=zh").data.decode("utf-8-sig")
     assert "AAA" in csv and "黄金坑" in csv
-    assert "黄金坑" in c.get("/api/export.md").data.decode()
+    assert "Golden pit" in c.get("/api/export.csv?lang=en").data.decode("utf-8-sig")
+    assert "黄金坑" in c.get("/api/export.md?lang=zh").data.decode()
+    assert "Golden pit" in c.get("/api/export.md?lang=en").data.decode()
     assert len(c.get("/api/history").get_json()["items"]) == 1
 
 
@@ -174,8 +177,9 @@ def test_ai_generate_requires_admin(tmp_path):
 
 def test_ai_disabled_returns_clear_error(app):
     run_scan(app, ("AAA",))
-    r = app.test_client().post("/api/ai/AAA")
+    r = app.test_client().post("/api/ai/AAA?lang=zh")
     assert r.status_code == 502 and "未启用" in r.get_json()["error"]
+    assert "not enabled" in app.test_client().post("/api/ai/AAA?lang=en").get_json()["error"]
 
 
 def test_auto_ai_runs_after_scan(tmp_path):
@@ -220,7 +224,7 @@ def test_cli_analyze_json(tmp_path, monkeypatch, capsys):
     import json as _j
     from golden_pit import cli
     _patch_provider(monkeypatch, tmp_path)
-    cli.main(["analyze", "aaa", "--json"])
+    cli.main(["--lang", "en", "analyze", "aaa", "--json"])
     out = _j.loads(capsys.readouterr().out)
     assert out["ticker"] == "AAA" and out["tier"] == "golden_pit" and len(out["checks"]) == 11
 
@@ -228,9 +232,12 @@ def test_cli_analyze_json(tmp_path, monkeypatch, capsys):
 def test_cli_scan_table(tmp_path, monkeypatch, capsys):
     from golden_pit import cli
     _patch_provider(monkeypatch, tmp_path)
-    cli.main(["scan", "AAA", "FLAT"])
+    cli.main(["--lang", "zh", "scan", "AAA", "FLAT"])
     out = capsys.readouterr().out
     assert "AAA" in out and "黄金坑" in out and "优质 · 待价" in out
+    cli.main(["--lang", "en", "scan", "AAA", "FLAT"])
+    out = capsys.readouterr().out
+    assert "Golden pit" in out and "Quality · wait" in out
 
 
 def test_mcp_tools(tmp_path):
@@ -243,7 +250,7 @@ def test_mcp_tools(tmp_path):
     assert res["results"][0]["ticker"] == "AAA" and res["results"][0]["tier"] == "golden_pit"
     assert tools["latest_results"](tier="quality_wait")["results"][0]["ticker"] == "FLAT"
     a = tools["analyze_stock"]("AAA")
-    assert a["verdict"] == "黄金坑" and a["checks"]
+    assert a["verdict"] == "Golden pit" and a["checks"]
     assert tools["analyze_stock"]("<bad>")["error"]
     assert tools["track_record"]()["summary"]["total"] == 1
     assert tools["methodology"]()["thresholds"]["drop_from_high_min_pct"] == 30.0
