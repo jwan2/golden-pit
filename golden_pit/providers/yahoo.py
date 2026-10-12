@@ -61,6 +61,10 @@ def _safe(fn):
         return None
 
 
+def is_rate_limit(e: BaseException) -> bool:
+    return "ratelimit" in type(e).__name__.lower() or "too many requests" in str(e).lower()
+
+
 def _retry(fn, ticker: str, retries: int = 2):
     last: Optional[Exception] = None
     for attempt in range(retries + 1):
@@ -71,7 +75,9 @@ def _retry(fn, ticker: str, retries: int = 2):
         except Exception as e:  # noqa: BLE001 — yfinance 会抛各种异常类型
             last = e
             if attempt < retries:
-                time.sleep(1.5 * (attempt + 1) + random.random())
+                # 被限流时退避要长得多，否则只会继续被拒
+                base = 10.0 if is_rate_limit(e) else 1.5
+                time.sleep(base * (attempt + 1) + random.random())
     raise FetchError(M("err.fetch", t=ticker, e=f"{type(last).__name__}: {last}"))
 
 

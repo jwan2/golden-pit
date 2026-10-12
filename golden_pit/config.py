@@ -98,6 +98,7 @@ class Settings:
     quote_ttl: float = 3600         # 行情缓存秒数
     lang: str = "en"                # 默认输出语言（网页按浏览器语言自动选择）
     scheduled_mode: str = "live"    # 定时扫描用哪个候选池：live / curated / sp500
+    min_interval: float = 0.4       # 两次 Yahoo 网络抓取之间的最小间隔（秒），防限流
     fundamentals_ttl: float = 7 * 86400
 
     @classmethod
@@ -115,5 +116,6 @@ class Settings:
             quote_ttl=float(env("GOLDEN_PIT_QUOTE_TTL", "3600")),
             fundamentals_ttl=float(env("GOLDEN_PIT_FUNDAMENTALS_TTL", str(7 * 86400))),
             lang=env_lang(),
+            min_interval=float(env("GOLDEN_PIT_MIN_INTERVAL", "0.4")),
             scheduled_mode=env("GOLDEN_PIT_SCHEDULED_MODE", "live") if env("GOLDEN_PIT_SCHEDULED_MODE", "live") in ("live", "curated", "sp500") else "live",
         )

@@ -35,6 +35,7 @@ Free market data is messy. Golden Pit refuses to guess:
 
 ### What you get
 
+- **Universes**: the Yahoo live screener of beaten-down stocks, all S&P 500 members, an 82-stock curated high-moat pool, your watchlist, or any tickers you type.
 - **Web app** with a sortable table, verdict reasons, all 11 checks with value, rule and note, watchlist ★, CSV/Markdown export and scan history.
 - **Timing layer** (falling / basing / rebounding) and a 1-year price chart with staged entry levels. It answers *"has it stopped falling?"* and does not change the verdict.
 - **Entry planner**: −30% / −40% / −50% tranches from the 52-week high, sized from your own capital and position cap. It is a discipline template, not advice.
@@ -52,6 +53,8 @@ Free market data is messy. Golden Pit refuses to guess:
 pip install "golden-pit[mcp] @ git+https://github.com/jwan2/golden-pit.git"
 golden-pit serve                 # → http://127.0.0.1:5000
 golden-pit scan MCD NKE BKNG     # terminal table
+golden-pit scan --mode sp500     # all ~500 S&P 500 members (first run is slow, then cached)
+golden-pit universe update       # refresh the S&P 500 constituent list
 golden-pit analyze MCD           # full reasoning for one stock
 golden-pit track                 # forward track record
 claude mcp add golden-pit -- golden-pit mcp   # use from Claude Code
@@ -68,6 +71,7 @@ Data lives in `~/.golden-pit`. You can override it with `GOLDEN_PIT_DATA`. Thres
 | `GOLDEN_PIT_HOST` / `GOLDEN_PIT_PORT` | Default `127.0.0.1:5000` |
 | `GOLDEN_PIT_DATA` | Data directory (default `~/.golden-pit`) |
 | `GOLDEN_PIT_SCHEDULER=1`, `GOLDEN_PIT_SLOTS` | Auto-scan on US weekdays, default `08:30,16:15` ET |
+| `GOLDEN_PIT_SCHEDULED_MODE` | Universe for scheduled scans: `live` (default), `sp500` or `curated` |
 | `GOLDEN_PIT_QUOTE_TTL`, `GOLDEN_PIT_FUNDAMENTALS_TTL` | Cache lifetimes in seconds (default 1 h / 7 days) |
 | `GOLDEN_PIT_AI_PROVIDER` | `none` · `cli` (Command Code) · `openai` (any compatible API) |
 | `GOLDEN_PIT_AI_MODEL`, `_BASE_URL`, `_KEY`, `_AUTO_TOP` | AI settings; `_AUTO_TOP=5` auto-reviews the top 5 after each scan |
@@ -113,6 +117,7 @@ Use a single worker. Scan state and the scheduler live in-process.
 
 ### 功能
 
+- **候选池**：Yahoo 实时筛选（跌深的股票）、S&P 500 全部成分股、82 只高壁垒核心池、你的自选，或任意代码
 - **网页**：可排序表格、结论理由、11 项指标逐条（值 / 要求 / 备注）、★ 自选、CSV / Markdown 导出、历史回看
 
 ![表格视图](docs/screenshot-table.jpg)

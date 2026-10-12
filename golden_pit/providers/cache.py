@@ -11,6 +11,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -33,12 +34,27 @@ def _load_statement(d: dict) -> Statement:
 class CachedProvider:
     def __init__(self, cache_dir: Path, quote_ttl: float = 3600, fundamentals_ttl: float = 7 * 86400,
                  fetch_quote: Callable[[str], dict] = yahoo.fetch_quote,
-                 fetch_fundamentals: Callable[[str], dict] = yahoo.fetch_fundamentals):
+                 fetch_fundamentals: Callable[[str], dict] = yahoo.fetch_fundamentals,
+                 min_interval: float = 0.4):
         self.dir = Path(cache_dir)
         (self.dir / "quote").mkdir(parents=True, exist_ok=True)
         (self.dir / "fundamentals").mkdir(parents=True, exist_ok=True)
         self.quote_ttl, self.fund_ttl = quote_ttl, fundamentals_ttl
         self._fetch_quote, self._fetch_fund = fetch_quote, fetch_fundamentals
+        # 节流：所有线程共享，两次真正的网络抓取之间至少间隔 min_interval 秒（缓存命中不受影响）
+        self.min_interval = min_interval
+        self._throttle_lock = threading.Lock()
+        self._next_slot = 0.0
+
+    def _throttle(self) -> None:
+        if self.min_interval <= 0:
+            return
+        with self._throttle_lock:
+            now = time.monotonic()
+            wait = self._next_slot - now
+            self._next_slot = max(now, self._next_slot) + self.min_interval
+        if wait > 0:
+            time.sleep(wait)
 
     # ---------------------------------------------------------------- 底层读写
     def _path(self, kind: str, ticker: str) -> Path:
@@ -73,6 +89,7 @@ class CachedProvider:
         if cached:
             cached["closes"] = [tuple(x) for x in cached.get("closes", [])]
             return cached
+        self._throttle()
         q = self._fetch_quote(ticker)          # 失败直接抛出，不回退旧数据
         self._write("quote", ticker, q)
         return q
@@ -84,6 +101,7 @@ class CachedProvider:
             return {"balance": _load_statement(cached["balance"]), "income": _load_statement(cached["income"]),
                     "cashflow": _load_statement(cached["cashflow"]),
                     "splits": [tuple(x) for x in cached.get("splits", [])], "fetched_at": cached["fetched_at"]}
+        self._throttle()
         f = self._fetch_fund(ticker)
         if not f["balance"].empty:              # 只缓存有效结果
             self._write("fundamentals", ticker, {

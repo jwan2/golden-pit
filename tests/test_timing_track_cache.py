@@ -193,3 +193,49 @@ def test_history_archive_has_no_charts(tmp_path):
     assert "chart" in st.latest()["results"][0]
     hist = _j.loads((tmp_path / "history" / "scan_20260101_000000.json").read_text())
     assert "chart" not in hist["results"][0] and hist["results"][0]["ticker"] == "A"
+
+
+# ---------------- 限流：节流、识别、补扫
+def test_throttle_spaces_out_network_fetches(tmp_path):
+    calls = []
+    cp = CachedProvider(tmp_path, fetch_quote=fake_quote_factory(calls), fetch_fundamentals=fake_fund_factory(calls),
+                        min_interval=0.05)
+    t0 = time.monotonic()
+    for t in ("AAA", "BBB", "CCC"):
+        cp.quote(t)
+    assert time.monotonic() - t0 >= 0.09            # 3 次真实抓取 → 至少 2 个间隔
+    t1 = time.monotonic()
+    cp.quote("AAA")                                  # 缓存命中不节流
+    assert time.monotonic() - t1 < 0.04
+
+
+def test_rate_limit_detection():
+    from golden_pit.providers.yahoo import is_rate_limit
+
+    class YFRateLimitError(Exception):
+        pass
+    assert is_rate_limit(YFRateLimitError("Too Many Requests"))
+    assert is_rate_limit(RuntimeError("429 Too Many Requests")) and not is_rate_limit(ValueError("x"))
+
+
+def test_scanner_retries_transient_fetch_failures(tmp_path):
+    from golden_pit.config import ScreenerConfig, Thresholds
+    from golden_pit.i18n import M
+    from golden_pit.scanner import Scanner
+    from golden_pit.store import Store
+    from tests.conftest import healthy_raw
+    attempts = {}
+
+    def flaky(t):
+        attempts[t] = attempts.get(t, 0) + 1
+        if t == "FLAKY" and attempts[t] == 1:
+            raise FetchError(M("err.fetch", t=t, e="YFRateLimitError: Too Many Requests"))
+        if t == "DEAD":
+            raise FetchError(M("err.no_quote", t=t))
+        return healthy_raw(t)
+    sc = Scanner(Store(tmp_path), Thresholds(), ScreenerConfig(), workers=2, fetch=flaky)
+    sc.retry_cooldown = 0
+    scan = sc.run_sync("custom", ["AAA", "FLAKY", "DEAD"], "t")
+    tiers = {r["ticker"]: r["verdict"]["tier"] for r in scan["results"]}
+    assert tiers == {"AAA": "golden_pit", "FLAKY": "golden_pit", "DEAD": "error"}
+    assert attempts == {"AAA": 1, "FLAKY": 2, "DEAD": 1}      # 无效代码不重试

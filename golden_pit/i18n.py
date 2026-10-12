@@ -245,6 +245,7 @@ CATALOG: dict[str, tuple[str, str]] = {
     "u.sp500_bad": ("成分股名单异常（只解析到 {n} 只），未更新", "Constituent list looks wrong (only {n} parsed); not updated"),
     "s.universe": ("正在确定候选池…", "Building the candidate list…"),
     "s.analyzing": ("正在分析 {n} 只标的…", "Analyzing {n} tickers…"),
+    "s.retrying": ("正在补扫 {n} 只抓取失败的标的（避开限流）…", "Retrying {n} tickers that failed to fetch (backing off from rate limits)…"),
     "s.tracking": ("正在更新战绩追踪…", "Updating the track record…"),
     "s.done": ("完成：{n} 只，其中黄金坑 {g} 只", "Done: {n} tickers, {g} golden pits"),
     "s.done_failed": ("完成：{n} 只，其中黄金坑 {g} 只，{f} 只抓取失败", "Done: {n} tickers, {g} golden pits, {f} fetch errors"),

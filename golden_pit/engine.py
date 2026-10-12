@@ -21,7 +21,8 @@ class Engine:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         self.store = Store(settings.data_dir)
         self.thresholds, self.screener = load_overrides(settings.data_dir)
-        self.provider = CachedProvider(settings.data_dir / "cache", settings.quote_ttl, settings.fundamentals_ttl)
+        self.provider = CachedProvider(settings.data_dir / "cache", settings.quote_ttl, settings.fundamentals_ttl,
+                                       min_interval=settings.min_interval)
         self.tracker = Tracker(settings.data_dir)
         self.ai = ai or AIService(AIConfig.from_env(), settings.data_dir)
         self.scanner = Scanner(

@@ -19,6 +19,14 @@ from .store import Store
 from .track import Tracker
 
 SCAN_DEADLINE_SECONDS = 15 * 60
+RETRY_COOLDOWN_SECONDS = 20     # 补扫前先冷却，让 Yahoo 的限流窗口过去
+RETRY_MAX = 200
+
+
+def _is_retryable(r: dict) -> bool:
+    """只补扫"抓取失败 / 超时"这类暂时性错误；代码无效（没有行情）不重试。"""
+    err = r.get("error")
+    return isinstance(err, dict) and err.get("$m") in ("err.fetch", "err.timeout")
 
 
 def deadline_for(n: int) -> int:
@@ -61,6 +69,7 @@ class Scanner:
                  tracker: Optional["Tracker"] = None):
         self.store, self.th, self.screener, self.workers, self.fetch = store, thresholds, screener, workers, fetch
         self.on_complete, self.price, self.tracker = on_complete, price, tracker
+        self.retry_cooldown = RETRY_COOLDOWN_SECONDS
         self._lock = threading.Lock()
         self.state = self._idle_state()
 
@@ -126,6 +135,17 @@ class Scanner:
             pool.shutdown(wait=False, cancel_futures=True)
         for t in tickers:  # 超时未完成的如实标记，不丢弃
             results.setdefault(t, error_result(t, M("err.timeout", t=t, m=limit // 60)))
+
+        # 补扫：主扫描里因限流/网络失败的，冷却后单线程再试一次（成功的数据已缓存，不会重复抓）
+        retry = [t for t in tickers if _is_retryable(results[t])][:RETRY_MAX]
+        if retry:
+            self._set(stage="retrying", done=0, total=len(retry), message=M("s.retrying", n=len(retry)))
+            time.sleep(self.retry_cooldown)
+            for i, t in enumerate(retry, 1):
+                r = analyze_ticker(t, self.th, self.fetch)
+                if not r.get("error"):
+                    results[t] = r
+                self._set(done=i, current=t)
 
         ordered = sorted(results.values(), key=lambda r: r["verdict"]["sort_key"] + [r["ticker"]])
         finished = datetime.now(timezone.utc)
