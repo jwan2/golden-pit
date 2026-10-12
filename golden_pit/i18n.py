@@ -250,6 +250,8 @@ CATALOG: dict[str, tuple[str, str]] = {
     "s.done": ("完成：{n} 只，其中黄金坑 {g} 只", "Done: {n} tickers, {g} golden pits"),
     "s.done_failed": ("完成：{n} 只，其中黄金坑 {g} 只，{f} 只抓取失败", "Done: {n} tickers, {g} golden pits, {f} fetch errors"),
     "s.failed": ("扫描失败", "Scan failed"),
+    "s.mostly_failed": ("只有 {ok}/{n} 只抓取成功，整次扫描作废，上一次结果保持不变。首个错误：{first}",
+                        "Only {ok}/{n} tickers fetched; this scan was discarded and the previous results were kept. First error: {first}"),
     "s.track_failed": ("战绩追踪更新失败：{e}", "Track-record update failed: {e}"),
     # ---------------------------------------------------------- 错误
     "err.no_quote": ("{t}：没有行情数据（代码无效、已退市或停牌）", "{t}: no quote data (invalid, delisted or halted)"),

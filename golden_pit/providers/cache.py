@@ -72,15 +72,19 @@ class CachedProvider:
             return None
 
     def _write(self, kind: str, ticker: str, obj: dict) -> None:
+        """缓存只是加速手段：目录被删就重建，再写不进去就放弃缓存，绝不让它拖垮分析。"""
         p = self._path(kind, ticker)
-        fd, tmp = tempfile.mkstemp(dir=p.parent, suffix=".tmp")
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=p.parent, suffix=".tmp")
+        except OSError:
+            return
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(obj, f, ensure_ascii=False, default=str)
             os.replace(tmp, p)
-        except BaseException:
+        except (OSError, TypeError, ValueError):
             Path(tmp).unlink(missing_ok=True)
-            raise
 
     # ---------------------------------------------------------------- 对外接口
     def quote(self, ticker: str, refresh: bool = False) -> dict:

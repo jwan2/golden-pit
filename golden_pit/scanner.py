@@ -21,6 +21,7 @@ from .track import Tracker
 SCAN_DEADLINE_SECONDS = 15 * 60
 RETRY_COOLDOWN_SECONDS = 20     # 补扫前先冷却，让 Yahoo 的限流窗口过去
 RETRY_MAX = 200
+MIN_SUCCESS_RATIO = 0.2         # 成功率低于 20%（且至少 5 只）→ 视为整次扫描失败，不覆盖上一次结果
 
 
 def _is_retryable(r: dict) -> bool:
@@ -146,6 +147,11 @@ class Scanner:
                 if not r.get("error"):
                     results[t] = r
                 self._set(done=i, current=t)
+
+        ok = sum(1 for r in results.values() if not r.get("error"))
+        if len(tickers) >= 5 and ok < len(tickers) * MIN_SUCCESS_RATIO:
+            first = next((r["error"] for r in results.values() if r.get("error")), "")
+            raise MsgError(M("s.mostly_failed", ok=ok, n=len(tickers), first=first))
 
         ordered = sorted(results.values(), key=lambda r: r["verdict"]["sort_key"] + [r["ticker"]])
         finished = datetime.now(timezone.utc)

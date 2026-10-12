@@ -239,3 +239,48 @@ def test_scanner_retries_transient_fetch_failures(tmp_path):
     tiers = {r["ticker"]: r["verdict"]["tier"] for r in scan["results"]}
     assert tiers == {"AAA": "golden_pit", "FLAKY": "golden_pit", "DEAD": "error"}
     assert attempts == {"AAA": 1, "FLAKY": 2, "DEAD": 1}      # 无效代码不重试
+
+
+
+def test_cache_dir_deleted_while_running_still_works(tmp_path):
+    """真实事故：服务运行中删除缓存目录 → 之前每只股票都 FileNotFoundError。"""
+    import shutil
+    calls = []
+    cp = CachedProvider(tmp_path / "c", fetch_quote=fake_quote_factory(calls), fetch_fundamentals=fake_fund_factory(calls),
+                        min_interval=0)
+    shutil.rmtree(tmp_path / "c")
+    r = cp.raw("AAA")
+    assert r.info["currentPrice"] == 10.0 and (tmp_path / "c" / "quote" / "AAA.json").exists()
+
+
+def test_cache_write_failure_is_not_fatal(tmp_path, monkeypatch):
+    import tempfile as _tf
+    calls = []
+    cp = CachedProvider(tmp_path, fetch_quote=fake_quote_factory(calls), fetch_fundamentals=fake_fund_factory(calls),
+                        min_interval=0)
+
+    def boom(*a, **k):
+        raise PermissionError("read-only")
+    monkeypatch.setattr(_tf, "mkstemp", boom)
+    assert cp.raw("AAA").info["currentPrice"] == 10.0
+
+
+def test_mostly_failed_scan_does_not_replace_previous(tmp_path):
+    from golden_pit.config import ScreenerConfig, Thresholds
+    from golden_pit.i18n import M, MsgError, render
+    from golden_pit.scanner import Scanner
+    from golden_pit.store import Store
+    from tests.conftest import healthy_raw
+    st = Store(tmp_path)
+    good = Scanner(st, Thresholds(), ScreenerConfig(), workers=2, fetch=healthy_raw)
+    first = good.run_sync("custom", ["AAA", "BBB", "CCC", "DDD", "EEE"], "t")
+
+    def broken(t):
+        raise FetchError(M("err.analyze", t=t, e="FileNotFoundError"))
+    bad = Scanner(st, Thresholds(), ScreenerConfig(), workers=2, fetch=broken)
+    bad.retry_cooldown = 0
+    with pytest.raises(MsgError) as ei:
+        bad.run_sync("custom", ["AAA", "BBB", "CCC", "DDD", "EEE"], "t")
+    assert "0/5" in render(ei.value.msg, "en")
+    assert st.latest()["scan_id"] == first["scan_id"]               # 上一次好结果保持不变
+    assert len(st.list_history()) == 1
