@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>黄金坑筛选器</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c58a00'/%3E%3Cpath d='M8 12h16l-6 9v-4h-4z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>黄金坑筛选器</h1>
+      <p id="freshness" class="muted">加载中…</p>
+    </div>
+    <nav class="actions">
+      <button id="btn-scan" class="primary">运行扫描</button>
+      <button id="btn-track">战绩</button>
+      <button id="btn-history">历史</button>
+      <button id="btn-method">方法论</button>
+      <a class="btn" href="/api/export.csv" download>导出 CSV</a>
+      <a class="btn" href="/api/export.md" download>导出 MD</a>
+    </nav>
+  </header>
+
+  <div id="progress" class="progress" hidden>
+    <div class="progress-text"><span id="progress-msg"></span><span id="progress-count" class="muted"></span></div>
+    <div class="bar"><div id="progress-fill"></div></div>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+
+  <main>
+    <section id="summary" class="summary" aria-label="结论分布"></section>
+    <section id="changes" class="changes" hidden></section>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="搜索代码、公司、行业" aria-label="搜索">
+      <label class="check"><input id="only-watch" type="checkbox"> ★ 只看自选</label>
+      <label class="check"><input id="hide-noise" type="checkbox" checked> 隐藏“不适用 / 抓取失败”</label>
+      <span id="count" class="muted"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+      <div id="empty" class="empty" hidden></div>
+    </div>
+
+    <p class="disclaimer muted">数据来自 Yahoo Finance，可能有延迟或错误；缺失的数据会标为“未知”，不会被当作通过。本工具只做筛选辅助，不构成投资建议。</p>
+  </main>
+
+  <aside id="drawer" class="drawer" hidden aria-label="个股详情">
+    <div class="drawer-inner" id="drawer-body"></div>
+  </aside>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <dialog id="dlg-scan">
+    <form method="dialog" id="scan-form">
+      <h2>运行扫描</h2>
+      <fieldset>
+        <label class="radio"><input type="radio" name="mode" value="live" checked>
+          <span><b>Yahoo 实时筛选</b><small>从全美股里按“市值、52 周跌幅、P/B、FCF”初筛候选，再逐只判定</small></span></label>
+        <label class="radio"><input type="radio" name="mode" value="curated">
+          <span><b>核心池</b><small>知识库里 18 个高壁垒行业的 82 只标的</small></span></label>
+        <label class="radio"><input type="radio" name="mode" value="watch">
+          <span><b>我的自选 ★</b><small>只扫描你标星的股票</small></span></label>
+        <label class="radio"><input type="radio" name="mode" value="custom">
+          <span><b>自定义代码</b><small>空格或逗号分隔，最多 60 只</small></span></label>
+      </fieldset>
+      <p id="watch-note" class="muted small" hidden></p>
+      <textarea id="custom-tickers" rows="2" placeholder="例如：MCD, NKE, BKNG" hidden></textarea>
+      <label id="token-row" class="field" hidden>管理员令牌
+        <input id="token" type="password" autocomplete="off" placeholder="X-Admin-Token">
+      </label>
+      <p id="scan-error" class="error" hidden></p>
+      <div class="dlg-actions">
+        <button value="cancel" class="plain">取消</button>
+        <button id="scan-go" class="primary" value="go">开始</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-method"><div class="dlg-body" id="method-body"></div>
+    <form method="dialog" class="dlg-actions"><button class="primary">关闭</button></form></dialog>
+
+  <dialog id="dlg-track" class="wide"><div class="dlg-body" id="track-body"></div>
+    <form method="dialog" class="dlg-actions"><button class="plain">关闭</button></form></dialog>
+
+  <dialog id="dlg-history"><div class="dlg-body" id="history-body"></div>
+    <form method="dialog" class="dlg-actions"><button class="plain">关闭</button></form></dialog>
+
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>

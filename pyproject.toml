@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "golden-pit"
+version = "0.1.0"
+description = "Find quality US stocks that are genuinely in a price pit — with honest data handling, staged entry plans, forward tracking and optional AI research notes."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jia" }]
+requires-python = ">=3.10"
+keywords = ["stocks", "value-investing", "screener", "yfinance", "mcp", "golden-pit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "flask>=3.0",
+  "yfinance>=0.2.50",
+  "pandas>=2.0",
+  "tzdata",
+]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.2"]
+server = ["gunicorn>=22; sys_platform != 'win32'"]
+dev = ["pytest>=8", "mcp>=1.2"]
+
+[project.scripts]
+golden-pit = "golden_pit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jwan2/golden-pit"
+Issues = "https://github.com/jwan2/golden-pit/issues"
+
+[tool.setuptools.packages.find]
+include = ["golden_pit*"]
+
+[tool.setuptools.package-data]
+golden_pit = ["web/*", "data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

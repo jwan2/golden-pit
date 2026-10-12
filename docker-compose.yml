@@ -1,0 +1,17 @@
+services:
+  golden-pit:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"     # only localhost; put an HTTPS reverse proxy in front
+    volumes:
+      - golden-pit-data:/data
+    environment:
+      GOLDEN_PIT_ADMIN_TOKEN: ${GOLDEN_PIT_ADMIN_TOKEN:?set GOLDEN_PIT_ADMIN_TOKEN in .env}
+      GOLDEN_PIT_SCHEDULER: "1"
+      GOLDEN_PIT_AI_PROVIDER: ${GOLDEN_PIT_AI_PROVIDER:-none}
+      GOLDEN_PIT_AI_MODEL: ${GOLDEN_PIT_AI_MODEL:-}
+      GOLDEN_PIT_AI_BASE_URL: ${GOLDEN_PIT_AI_BASE_URL:-https://api.openai.com/v1}
+      GOLDEN_PIT_AI_KEY: ${GOLDEN_PIT_AI_KEY:-}
+volumes:
+  golden-pit-data:
