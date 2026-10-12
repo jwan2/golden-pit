@@ -116,6 +116,8 @@ class Scanner:
             tickers, note = universe.curated()
         elif mode == "sp500":
             tickers, note = universe.sp500(self.store.dir)
+        elif mode == "combined":
+            tickers, note = universe.combined(self.screener, self.store.dir)
         else:
             tickers, note = universe.live_screen(self.screener)
         self._set(stage="analyzing", total=len(tickers), done=0, message=M("s.analyzing", n=len(tickers)))

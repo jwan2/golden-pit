@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> None:
 
     s = sub.add_parser("scan", help=tr("cli.h.scan", lang))
     s.add_argument("tickers", nargs="*", help=tr("cli.h.tickers", lang))
-    s.add_argument("--mode", choices=["live", "curated", "sp500", "custom"])
+    s.add_argument("--mode", choices=["live", "curated", "sp500", "combined", "custom"])
     s.add_argument("--json", action="store_true", help=tr("cli.h.json", lang))
 
     s = sub.add_parser("analyze", help=tr("cli.h.analyze", lang))

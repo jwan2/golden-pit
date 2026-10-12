@@ -71,7 +71,7 @@ Data lives in `~/.golden-pit`. You can override it with `GOLDEN_PIT_DATA`. Thres
 | `GOLDEN_PIT_HOST` / `GOLDEN_PIT_PORT` | Default `127.0.0.1:5000` |
 | `GOLDEN_PIT_DATA` | Data directory (default `~/.golden-pit`) |
 | `GOLDEN_PIT_SCHEDULER=1`, `GOLDEN_PIT_SLOTS` | Auto-scan on US weekdays, default `08:30,16:15` ET |
-| `GOLDEN_PIT_SCHEDULED_MODE` | Universe for scheduled scans: `live` (default), `sp500` or `curated` |
+| `GOLDEN_PIT_SCHEDULED_MODE` | Universe for scheduled scans: `live` (default), `sp500`, `combined` (S&P 500 + live) or `curated` |
 | `GOLDEN_PIT_QUOTE_TTL`, `GOLDEN_PIT_FUNDAMENTALS_TTL` | Cache lifetimes in seconds (default 1 h / 7 days) |
 | `GOLDEN_PIT_AI_PROVIDER` | `none` · `cli` (Command Code) · `openai` (any compatible API) |
 | `GOLDEN_PIT_AI_MODEL`, `_BASE_URL`, `_KEY`, `_AUTO_TOP` | AI settings; `_AUTO_TOP=5` auto-reviews the top 5 after each scan |

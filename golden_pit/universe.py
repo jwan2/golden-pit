@@ -15,7 +15,8 @@ from .i18n import M, MsgError
 TICKER_RE = re.compile(r"^[A-Z]{1,5}(-[A-Z])?$")
 SP500_FILE = "sp500.json"
 SP500_SOURCE = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-MODES = ("live", "curated", "sp500", "custom")
+MODES = ("live", "curated", "sp500", "combined", "custom")
+SCHEDULABLE = ("live", "curated", "sp500", "combined")
 
 
 def parse_tickers(raw: list[str] | str, limit: int = 60) -> list[str]:
@@ -69,6 +70,19 @@ def update_sp500(data_dir: Path) -> tuple[int, str]:
                    encoding="utf-8")
     tmp.replace(path)
     return len(rows), as_of
+
+
+def combined(cfg: ScreenerConfig, data_dir: Optional[Path] = None,
+             live=None) -> tuple[list[str], dict]:
+    """S&P 500 ∪ Yahoo 实时筛选。实时筛选失败时退回只扫 S&P 500，并在说明里如实注明。"""
+    base, _ = sp500(data_dir)
+    try:
+        extra, _ = (live or live_screen)(cfg)
+    except Exception:  # noqa: BLE001 — 实时筛选挂了不应拖垮整次扫描
+        return base, M("u.combined_partial", n=len(base))
+    seen = set(base)
+    added = [t for t in extra if t not in seen]
+    return base + added, M("u.combined", n=len(base) + len(added), extra=len(added))
 
 
 def live_screen(cfg: ScreenerConfig) -> tuple[list[str], dict]:

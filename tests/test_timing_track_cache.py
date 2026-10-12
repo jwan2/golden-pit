@@ -284,3 +284,19 @@ def test_mostly_failed_scan_does_not_replace_previous(tmp_path):
     assert "0/5" in render(ei.value.msg, "en")
     assert st.latest()["scan_id"] == first["scan_id"]               # 上一次好结果保持不变
     assert len(st.list_history()) == 1
+
+
+
+def test_combined_universe_merges_and_survives_live_failure():
+    from golden_pit import universe
+    from golden_pit.config import ScreenerConfig
+    from golden_pit.i18n import render
+    base, _ = universe.sp500()
+    tickers, note = universe.combined(ScreenerConfig(), live=lambda cfg: (["AAPL", "ZZZQ", "BRBR"], {}))
+    assert tickers[: len(base)] == base and tickers[len(base):] == ["ZZZQ", "BRBR"]
+    assert "2 outside" in render(note, "en")
+
+    def boom(cfg):
+        raise RuntimeError("yahoo down")
+    tickers, note = universe.combined(ScreenerConfig(), live=boom)
+    assert tickers == base and "failed" in render(note, "en")
