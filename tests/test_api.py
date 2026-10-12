@@ -287,3 +287,19 @@ def test_sp500_mode_end_to_end(tmp_path, monkeypatch):
     scan = c.get("/api/scan/latest?lang=en").get_json()["scan"]
     assert scan["universe"]["mode"] == "sp500" and "S&P 500" in scan["universe"]["note"]
     assert c.get("/api/config").get_json()["scheduler"]["mode"] == "live"
+
+
+def test_slim_list_and_lazy_detail(app):
+    run_scan(app, ("AAA",))
+    eng = app.extensions["golden_pit"]["engine"]
+    scan = eng.store.latest()
+    scan["results"][0]["chart"] = {"dates": ["2026-01-01"], "closes": [1.0]}
+    eng.store.save_scan(scan)
+    c = app.test_client()
+    assert "chart" in c.get("/api/scan/latest").get_json()["scan"]["results"][0]
+    slim = c.get("/api/scan/latest?slim=1").get_json()["scan"]["results"][0]
+    assert "chart" not in slim and "reasons" not in slim["verdict"] and slim["slim"] is True
+    assert {"key", "group", "status", "value", "display"} == set(slim["checks"][0])
+    full = c.get("/api/scan/latest/aaa?lang=en").get_json()["result"]
+    assert full["chart"]["closes"] == [1.0] and full["verdict"]["label"] == "Golden pit"
+    assert c.get("/api/scan/latest/ZZZZ").status_code == 404

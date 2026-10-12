@@ -61,6 +61,7 @@ const state = {
   ai: {}, onlyWatch: false,
   watch: new Set(store.get('gp_watch', [])),
   plan: store.get('gp_plan', { capital: '', cap: 5 }),
+  details: {},
 };
 
 const ICON = { pass: '✓', fail: '✗', unknown: '?', na: '–' };
@@ -363,9 +364,16 @@ function group(title, sub, checks) {
   return h('section', { class: 'card' }, h('h3', null, title, h('small', null, sub)), checks.map(checkRow));
 }
 
-function openDrawer(ticker) {
-  const r = state.scan.results.find((x) => x.ticker === ticker);
+/** 列表数据不含走势图；打开详情时按需取完整结果（历史扫描本来就没有图表，不取） */
+async function openDrawer(ticker) {
+  let r = (!state.viewingHistory && state.details[ticker]) || state.scan.results.find((x) => x.ticker === ticker);
   if (!r) return;
+  if (!state.viewingHistory && r.slim && !r.error) {
+    try {
+      r = (await api('/api/scan/latest/' + encodeURIComponent(ticker))).result;
+      state.details[ticker] = r;
+    } catch { /* 取不到就用列表里的数据，只是没有图 */ }
+  }
   const v = r.verdict, g = (name) => r.checks.filter((c) => c.group === name);
   const body = $('drawer-body');
   fill(body,
@@ -380,7 +388,7 @@ function openDrawer(ticker) {
       r.dividend_yield_pct != null ? h('span', null, t('d.div'), h('b', { class: 'num' }, r.dividend_yield_pct + '%')) : null),
     r.warnings.length ? h('div', { class: 'warnbox' }, r.warnings.map((w) => h('div', null, '⚠ ' + w))) : null,
     h('section', { class: 'card' }, h('h3', null, t('d.why')),
-      h('ul', { class: 'reasons' }, v.reasons.map((x) => h('li', null, x)))),
+      h('ul', { class: 'reasons' }, (v.reasons || []).map((x) => h('li', null, x)))),
     timingCard(r),
     planCard(r),
     aiCard(r),
@@ -634,7 +642,8 @@ function render() {
 
 async function loadLatest() {
   state.viewingHistory = null;
-  state.scan = (await api('/api/scan/latest')).scan;
+  state.scan = (await api('/api/scan/latest?slim=1')).scan;
+  state.details = {};
   state.ai = state.scan && state.config.ai.enabled ? (await api('/api/ai').catch(() => ({ items: {} }))).items : {};
   render();
 }
@@ -642,6 +651,7 @@ async function loadLatest() {
 async function loadHistory(name) {
   state.scan = (await api('/api/history/' + encodeURIComponent(name))).scan;
   state.viewingHistory = name;
+  state.details = {};
   render();
 }
 

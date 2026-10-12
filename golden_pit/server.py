@@ -98,9 +98,38 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
             scheduler={**scheduler.info(), "mode": settings.scheduled_mode}, ai=ai.cfg.public(),
         )
 
+    LIST_FIELDS = ("ticker", "name", "sector", "industry", "currency", "price", "market_cap", "drop_from_high_pct",
+                   "warnings", "error", "fetched_at")
+
+    def _slim_one(r: dict) -> dict:
+        """表格只需要的字段：理由、规则、备注、走势图、护城河、买入计划都留给详情接口按需取。"""
+        v = r["verdict"]
+        out_r = {k: r.get(k) for k in LIST_FIELDS}
+        out_r["verdict"] = {k: v.get(k) for k in ("tier", "label", "fin_pass", "fin_total", "mgmt_pass", "mgmt_total",
+                                                  "anchors_pass", "unknown_count", "sort_key")}
+        out_r["checks"] = [{k: c[k] for k in ("key", "group", "status", "value", "display")} for c in r.get("checks", [])]
+        tm = r.get("timing") or {}
+        out_r["timing"] = {k: tm.get(k) for k in ("state", "label", "reason")}
+        out_r["slim"] = True
+        return out_r
+
+    def _slim(scan):
+        if not scan:
+            return scan
+        return {**scan, "results": [_slim_one(r) for r in scan["results"]]}
+
     @app.get("/api/scan/latest")
     def latest():
-        return out(scan=store.latest())
+        scan = store.latest()
+        return out(scan=_slim(scan) if request.args.get("slim") == "1" else scan)
+
+    @app.get("/api/scan/latest/<ticker>")
+    def latest_one(ticker):
+        scan = store.latest() or {}
+        r = next((x for x in scan.get("results", []) if x["ticker"] == ticker.upper()), None)
+        if r is None:
+            abort(404)
+        return out(result=r)
 
     @app.get("/api/scan/status")
     def scan_status():
