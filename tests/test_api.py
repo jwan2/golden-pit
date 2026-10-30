@@ -120,6 +120,13 @@ def test_security_headers(app):
     assert r.headers["Cache-Control"] == "no-store"
 
 
+def test_csp_allows_cloudflare_web_analytics(app):
+    csp = app.test_client().get("/api/health").headers["Content-Security-Policy"]
+    directives = {d.split()[0]: d.split()[1:] for d in csp.split("; ")}
+    assert directives["script-src"] == ["'self'", "https://static.cloudflareinsights.com"]
+    assert directives["connect-src"] == ["'self'", "https://cloudflareinsights.com"]
+
+
 def test_csv_formula_injection_guard():
     from golden_pit.server import _safe_cell
     assert _safe_cell("=1+1") == "'=1+1" and _safe_cell("Apple") == "Apple" and _safe_cell(5) == 5

@@ -66,8 +66,10 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
     @app.after_request
     def security_headers(resp):
         resp.headers["Content-Security-Policy"] = (
-            "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
-            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+            "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+            "script-src 'self' https://static.cloudflareinsights.com; "
+            "connect-src 'self' https://cloudflareinsights.com; "
+            "frame-ancestors 'none'; base-uri 'none'")
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "no-referrer"
         if request.path.startswith("/api/"):
