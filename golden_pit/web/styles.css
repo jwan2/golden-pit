@@ -210,3 +210,53 @@ dialog.wide { width: min(760px, calc(100vw - 32px)); }
 td.up { color: var(--pass); } td.down { color: var(--fail); }
 
 .lang { font-weight: 600; min-width: 56px; justify-content: center; }
+
+/* ---------- 黄金坑分档 ---------- */
+.grade { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  text-align: center; border: 1.5px solid currentColor; vertical-align: 1px; }
+.g-a { color: var(--pass); } .g-b { color: var(--t-wait); } .g-c { color: var(--muted); }
+.verdict-cell .gaps { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+tr.grp td { background: var(--surface-2); color: var(--text); font-size: 13px; padding: 7px 12px; cursor: default; white-space: normal; }
+tr.grp:hover { background: none; }
+tr.grp b { color: var(--t-golden); }
+tr.grp:not(.t-golden_pit) b { color: var(--text); }
+.grp-hint { color: var(--muted); margin-left: 10px; }
+.tile .split { font-size: 12px; margin-top: 2px; opacity: .85; }
+.rank .chk .val { font-weight: 400; color: var(--unknown); font-size: 13px; }
+.card h3 .grade { margin-left: 4px; }
+
+/* ---------- 战绩 ---------- */
+.tv-main { font-size: 15px; line-height: 1.6; margin-bottom: 10px; }
+.vrow { display: grid; grid-template-columns: 72px 1fr 64px; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
+.vrow b { text-align: right; }
+.ctrack { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; }
+.ctrack::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px solid var(--muted); }
+.cfill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.cfill.pos { left: 50%; } .cfill.neg { right: 50%; }
+.cfill.ours { background: var(--t-golden); } .cfill.bench { background: var(--na); }
+.warn-line { font-size: 13px; color: var(--unknown); margin: 10px 0 4px; }
+.table-wrap.flat { border: 0; border-radius: 0; }
+table.mini th { position: static; padding: 6px 8px; }
+table.mini th.r { text-align: right; }
+tr.thin td { opacity: .55; }
+table.mini td.nowrap { white-space: nowrap; }
+.grade + .hide-sm { margin-left: 2px; }
+.xrow { display: grid; grid-template-columns: auto 1fr auto 70px; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.xrow:first-of-type { border-top: 0; }
+.xrow b { text-align: right; }
+.xmean { color: var(--muted); font-size: 13px; }
+.bw-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.bw { display: grid; grid-template-columns: auto auto 1fr auto; gap: 6px; align-items: center; padding: 4px 0; font-size: 14px; }
+.bw .grade { margin-left: 0; }
+.bw .num { text-align: right; font-weight: 600; }
+span.up, b.up, .bw .up { color: var(--pass); } span.down, b.down, .bw .down { color: var(--fail); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tabs button { min-height: 30px; padding: 3px 12px; font-size: 13px; border-radius: 999px; }
+.tabs button.on { background: var(--accent-bg); border-color: var(--accent); font-weight: 600; }
+table.track td { white-space: nowrap; }
+table.track tbody tr { cursor: default; }
+@media (max-width: 760px) {
+  .bw-cols { grid-template-columns: 1fr; }
+  .xrow { grid-template-columns: auto 1fr 60px; } .xrow .xmean { display: none; }
+  .verdict-cell .gaps { white-space: normal; max-width: 140px; }
+}

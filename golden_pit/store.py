@@ -9,6 +9,8 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from . import rank
+
 HISTORY_KEEP = 60
 HISTORY_NAME_RE = re.compile(r"^scan_\d{8}_\d{6}\.json$")
 
@@ -47,7 +49,7 @@ class Store:
 
     def latest(self) -> Optional[dict]:
         try:
-            return json.loads(self.latest_path.read_text(encoding="utf-8"))
+            return rank.ensure(json.loads(self.latest_path.read_text(encoding="utf-8")))
         except (OSError, ValueError):
             return None
 
@@ -66,6 +68,6 @@ class Store:
         if not HISTORY_NAME_RE.match(name):  # 白名单文件名，杜绝路径穿越
             return None
         try:
-            return json.loads((self.history / name).read_text(encoding="utf-8"))
+            return rank.ensure(json.loads((self.history / name).read_text(encoding="utf-8")))
         except (OSError, ValueError):
             return None

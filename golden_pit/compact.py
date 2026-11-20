@@ -9,6 +9,7 @@ def compact(r: dict, detail: bool = True, lang: str = "en") -> dict:
     out = {
         "ticker": r["ticker"], "name": r.get("name"), "industry": r.get("industry"),
         "verdict": v["label"], "tier": v["tier"],
+        "priority": (v.get("rank") or {}).get("label"), "priority_gaps": (v.get("rank") or {}).get("gap_labels"),
         "price": r.get("price"), "currency": r.get("currency"),
         "drop_from_52w_high_pct": None if r.get("drop_from_high_pct") is None else round(r["drop_from_high_pct"], 1),
         "financial_pass": f"{v['fin_pass']}/{v['fin_total']}", "management_pass": f"{v['mgmt_pass']}/3",

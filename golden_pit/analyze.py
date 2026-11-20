@@ -5,7 +5,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Callable
 
-from . import metrics, moat
+from . import metrics, moat, rank
 from .plan import entry_plan
 from .timing import analyze_timing, chart_series
 from .config import Thresholds
@@ -19,7 +19,7 @@ def analyze_raw(raw: RawStock, th: Thresholds) -> dict:
     facts = metrics.build_facts(raw)
     checks = metrics.build_checks(raw, th)
     verdict = decide(checks, facts, th)
-    return {
+    return rank.apply({
         "ticker": raw.ticker,
         **facts,
         "drop_from_high_pct": metrics.drop_from_high(raw),
@@ -33,16 +33,16 @@ def analyze_raw(raw: RawStock, th: Thresholds) -> dict:
         "fetched_at": raw.fetched_at,
         "fundamentals_fetched_at": raw.fundamentals_fetched_at,
         "error": None,
-    }
+    })
 
 
 def error_result(ticker: str, message) -> dict:
     return {
         "ticker": ticker, "name": ticker, "sector": "", "industry": "", "currency": "USD",
         "price": None, "market_cap": None, "drop_from_high_pct": None, "checks": [],
-        "verdict": {"tier": "error", "label": M("tier.error"), "reasons": [message], "sort_key": [99, 0, 0],
+        "verdict": {"tier": "error", "label": M("tier.error"), "reasons": [message], "sort_key": [99, 0, 0, 0],
                     "quality_ok": False, "pit_ok": False, "fin_pass": 0, "fin_total": 5, "mgmt_pass": 0,
-                    "mgmt_total": 3, "anchors_pass": 0, "unknown_count": 0},
+                    "mgmt_total": 3, "anchors_pass": 0, "unknown_count": 0, "rank": None},
         "moat": moat.lookup(ticker), "plan": None, "warnings": [],
         "timing": {"state": "unknown", "label": M("tm.unknown"), "reason": "", "metrics": {}},
         "chart": {"dates": [], "closes": []}, "fundamentals_fetched_at": "",

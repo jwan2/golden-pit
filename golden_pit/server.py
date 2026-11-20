@@ -108,7 +108,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         v = r["verdict"]
         out_r = {k: r.get(k) for k in LIST_FIELDS}
         out_r["verdict"] = {k: v.get(k) for k in ("tier", "label", "fin_pass", "fin_total", "mgmt_pass", "mgmt_total",
-                                                  "anchors_pass", "unknown_count", "sort_key")}
+                                                  "anchors_pass", "unknown_count", "sort_key", "rank")}
         out_r["checks"] = [{k: c[k] for k in ("key", "group", "status", "value", "display")} for c in r.get("checks", [])]
         tm = r.get("timing") or {}
         out_r["timing"] = {k: tm.get(k) for k in ("state", "label", "reason")}

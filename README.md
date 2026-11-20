@@ -39,7 +39,8 @@ Free market data is messy. Golden Pit refuses to guess:
 - **Web app** with a sortable table, verdict reasons, all 11 checks with value, rule and note, watchlist ★, CSV/Markdown export and scan history.
 - **Timing layer** (falling / basing / rebounding) and a 1-year price chart with staged entry levels. It answers *"has it stopped falling?"* and does not change the verdict.
 - **Entry planner**: −30% / −40% / −50% tranches from the 52-week high, sized from your own capital and position cap. It is a discipline template, not advice.
-- **Forward track record.** Every golden-pit call is logged with its price and compared to SPY going forward. This replaces a backtest: free data has no point-in-time fundamentals, so a backtest would be look-ahead-biased.
+- **A / B / C priority among golden pits.** No score: it counts 5 margin conditions (full financial and management marks, both valuation anchors, no missing data, not still falling) and shows exactly which ones a stock misses. The verdict itself never changes.
+- **Forward track record.** Every golden-pit call is logged with its price and compared to SPY going forward, with the grade at the time so A/B/C can be checked against each other. This replaces a backtest: free data has no point-in-time fundamentals, so a backtest would be look-ahead-biased.
 - **Optional AI research notes** via Command Code CLI or any OpenAI-compatible API. The model sees only our computed snapshot, output is schema-validated, and notes are labelled *opinion, not part of the verdict*.
 - **CLI and MCP server**, so Claude Code and other agents can call it directly.
 - **Bilingual (English / 中文)** everywhere: web UI with a language toggle, CLI (`--lang`), API (`?lang=`), MCP, exports and AI notes.
@@ -126,7 +127,8 @@ Use a single worker. Scan state and the scheduler live in-process.
 
 - **走势时机**：标出下跌中 / 筑底中 / 企稳反弹，并画一年价格图和分批价位线。回答"跌完了吗"，不改变判定
 - **买入计划器**：以 52 周高点为锚分三档；输入你的资金和单只上限，换算金额和股数。是纪律模板，不是建议
-- **战绩追踪**：每次判为黄金坑都记录价格，之后持续与 SPY 对比。免费数据没有历史时点财报，回测会有前视偏差，所以用前向记录代替
+- **黄金坑分 A / B / C 三档**：不打总分，只数 5 项余量条件（财务满分、管理层满分、估值双锚、数据完整、不在下跌中）满足了几项，并列出差在哪；判定本身不变
+- **战绩追踪**：每次判为黄金坑都记录价格，之后持续与 SPY 对比，并按入选时的 A/B/C 分开统计。免费数据没有历史时点财报，回测会有前视偏差，所以用前向记录代替
 - **AI 研判（可选）**：支持 Command Code CLI 或任意 OpenAI 兼容接口。模型只能看我们算好的快照，输出逐字段校验，标注"观点·不计入判定"
 - **命令行和 MCP server**：Claude Code 等 AI 客户端可直接调用
 - **中英双语**：网页（右上角一键切换）、命令行（`--lang zh`）、接口（`?lang=zh`）、MCP、导出和 AI 研判都支持

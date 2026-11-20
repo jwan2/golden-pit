@@ -23,7 +23,7 @@ class Engine:
         self.thresholds, self.screener = load_overrides(settings.data_dir)
         self.provider = CachedProvider(settings.data_dir / "cache", settings.quote_ttl, settings.fundamentals_ttl,
                                        min_interval=settings.min_interval)
-        self.tracker = Tracker(settings.data_dir)
+        self.tracker = Tracker(settings.data_dir, history=self.store.load_history)
         self.ai = ai or AIService(AIConfig.from_env(), settings.data_dir)
         self.scanner = Scanner(
             self.store, self.thresholds, self.screener, workers=settings.workers,
@@ -34,7 +34,7 @@ class Engine:
         return analyze_ticker(ticker, self.thresholds, self.scanner.fetch)
 
     def track_report(self) -> dict:
-        return Tracker.report(self.tracker.load())
+        return Tracker.report(self.tracker.ensure_grades())
 
     def _auto_ai(self, scan: dict) -> None:
         """扫描结束后，对最有看点的前 N 只自动生成 AI 研判（GOLDEN_PIT_AI_AUTO_TOP>0 时）。"""

@@ -134,7 +134,8 @@ function renderSummary() {
     box.append(h('button', {
       class: `tile t-${tier}`, 'aria-pressed': state.tier === tier, title: meta.desc,
       onclick: () => { state.tier = state.tier === tier ? null : tier; render(); },
-    }, h('div', { class: 'n num' }, n), h('div', { class: 'l' }, meta.label)));
+    }, h('div', { class: 'n num' }, n), h('div', { class: 'l' }, meta.label),
+    tier === 'golden_pit' ? gradeSplit() : null));
   }
 }
 
@@ -150,6 +151,18 @@ function renderChanges() {
     c.left_golden_pit.map((x) => `${x.ticker}→${tierLabel(x.now)}`).join(sep)));
   box.hidden = !parts.length;
   box.append(t('chg.prefix', { ago: fmt.ago(c.previous_finished_at) }), ...parts.flatMap((p, i) => (i ? ['　', p] : [p])));
+}
+
+/** 黄金坑里 A/B/C 各几只（老的历史扫描没有分档，就不显示） */
+function gradeSplit() {
+  const n = { a: 0, b: 0, c: 0 };
+  for (const r of state.scan.results) if (r.verdict.rank) n[r.verdict.rank.grade]++;
+  if (!n.a && !n.b && !n.c) return null;
+  return h('div', { class: 'split num' }, `A ${n.a} · B ${n.b} · C ${n.c}`);
+}
+
+function gradeChip(g, title) {
+  return g ? h('span', { class: `grade g-${g}`, title: title || t(`grade.${g}`) }, g.toUpperCase()) : null;
 }
 
 // ---------------------------------------------------------------- 渲染：表格
@@ -239,8 +252,18 @@ function renderTable() {
   empty.hidden = rows.length > 0;
   empty.textContent = t('empty.filter');
   $('count').textContent = t('count', { n: rows.length, total: state.scan.results.length });
+  // 按结论排序时分组显示：黄金坑按 A/B/C 分三段，其余每个档位一段
+  const grouped = state.sort.key === 'verdict';
+  const groupOf = (r) => (r.verdict.rank ? `${r.verdict.tier}:${r.verdict.rank.grade}` : r.verdict.tier);
+  const sizes = {};
+  for (const r of rows) sizes[groupOf(r)] = (sizes[groupOf(r)] || 0) + 1;
+  let lastGroup = null;
   for (const r of rows) {
     const v = r.verdict;
+    if (grouped && groupOf(r) !== lastGroup) {
+      lastGroup = groupOf(r);
+      body.append(groupRow(r, sizes[lastGroup]));
+    }
     const open = () => openDrawer(r.ticker);
     const fin = r.checks.filter((c) => c.group === 'financial');
     const mgmt = r.checks.filter((c) => c.group === 'management');
@@ -248,7 +271,8 @@ function renderTable() {
       tabindex: 0, onclick: open, onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } },
     },
       h('td', { class: 'star-cell' }, starButton(r.ticker)),
-      h('td', null, h('span', { class: `badge t-${v.tier}` }, v.label), aiMark(r)),
+      h('td', { class: 'verdict-cell' }, h('span', { class: `badge t-${v.tier}` }, v.label), gradeChip(v.rank?.grade, v.rank?.label), aiMark(r),
+        v.rank ? h('small', { class: 'gaps' }, v.rank.gap_labels.length ? t('rk.gaps', { list: v.rank.gap_labels.join(t('list.sep')) }) : t('rk.nogaps')) : null),
       h('td', { class: 'co' }, h('b', null, r.ticker), ' ', r.name !== r.ticker ? r.name : '',
         h('small', null, [r.industry, fmt.cap(r.market_cap)].filter((x) => x && x !== '—').join(' · '))),
       h('td', { class: 'r num' }, fmt.price(r.price)),
@@ -261,6 +285,14 @@ function renderTable() {
       h('td', null, dataCell(r)),
     ));
   }
+}
+
+function groupRow(r, n) {
+  const v = r.verdict, meta = state.config.tiers[v.tier];
+  const title = v.rank ? `${meta.label} · ${v.rank.label}` : meta.label;
+  const hint = v.rank ? t(`grp.hint.${v.rank.grade}`) : meta.desc;
+  return h('tr', { class: `grp t-${v.tier}` }, h('td', { colspan: COLUMNS.length },
+    h('b', null, title), h('span', { class: 'num' }, ` · ${t('grp.count', { n })}`), h('span', { class: 'grp-hint' }, hint)));
 }
 
 function starButton(ticker) {
@@ -334,6 +366,19 @@ function timingCard(r) {
       t('timing.metrics', { ma20: m.ma20, ma50: m.ma50 ?? '—', low: m.low_1y, date: m.low_date, rsi: m.rsi14 ?? '—' })) : null);
 }
 
+/** 同为黄金坑，这只排在哪一档、差在哪 */
+function rankCard(r) {
+  const rk = r.verdict.rank;
+  if (!rk) return null;
+  return h('section', { class: 'card rank' },
+    h('h3', null, t('rk.title'), h('small', null, gradeChip(rk.grade, rk.label), ' ', rk.label)),
+    h('p', { class: 'muted small' }, t('rk.explain')),
+    rk.conditions.map((c) => h('div', { class: `chk ${c.ok ? 'pass' : 'unknown'}` },
+      h('span', { class: `ic ${c.ok ? 'pass' : 'unknown'}`, 'aria-label': t(c.ok ? 'rk.met' : 'rk.missed') }, c.ok ? '✓' : '–'),
+      h('span', { class: 'lab' }, c.label),
+      h('span', { class: 'val' }, c.ok ? '' : c.gap))));
+}
+
 function valueOf(r, key) {
   const c = check(r, key);
   if (!c || c.status === 'unknown') return '—';
@@ -389,6 +434,7 @@ async function openDrawer(ticker) {
     r.warnings.length ? h('div', { class: 'warnbox' }, r.warnings.map((w) => h('div', null, '⚠ ' + w))) : null,
     h('section', { class: 'card' }, h('h3', null, t('d.why')),
       h('ul', { class: 'reasons' }, (v.reasons || []).map((x) => h('li', null, x)))),
+    rankCard(r),
     timingCard(r),
     planCard(r),
     aiCard(r),
@@ -522,6 +568,9 @@ function renderMethod() {
     h('ul', null,
       li(t('method.drop', { d: th.drop_from_high_min_pct })),
       li(t('method.anchor', { pb: th.pb_max, pe: th.forward_pe_max, n: th.pit_min_anchors }))),
+    h('h3', null, t('method.rank')),
+    h('p', null, t('method.rank.intro')),
+    h('ul', null, li(t('method.rank.list')), li(t('method.rank.grades')), li(t('method.rank.check'))),
     h('h3', null, t('method.integrity')),
     h('ul', null,
       li(t('method.i1', { n: th.max_unknown_checks })), li(t('method.i2')), li(t('method.i3')), li(t('method.i4')), li(t('method.i5'))),
@@ -532,31 +581,148 @@ async function openTrack() {
   const box = $('track-body');
   fill(box, h('h2', null, t('track.title')), h('p', { class: 'muted' }, t('loading')));
   $('dlg-track').showModal();
-  let rep;
-  try { rep = await api('/api/track'); } catch (e) { box.append(h('p', { class: 'error' }, e.message)); return; }
-  const s = rep.summary;
-  const pct = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
-  const signCls = (v) => (v > 0 ? 'up' : v < 0 ? 'down' : '');
-  const stat = (label, st) => h('div', { class: 'stat' }, h('div', { class: 'l' }, label),
-    st.n ? [h('div', { class: 'n num' }, pct(st.mean)), h('div', { class: 'muted small' }, t('track.stat', { m: pct(st.median), w: st.win_rate, n: st.n }))]
-      : h('div', { class: 'muted' }, t('track.nodata')));
-  fill(box,
+  try { state.track = await api('/api/track'); } catch (e) { box.append(h('p', { class: 'error' }, e.message)); return; }
+  drawTrack();
+}
+
+const pctS = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`);
+const signCls = (v) => (v > 0 ? 'up' : v < 0 ? 'down' : '');
+const ripe = (e, rep) => (e.days ?? 0) >= rep.summary.min_days_for_stats;
+
+/** 一根以 0 为中心的横条：负数往左、正数往右。宽度用 CSSOM 设置（CSP 不允许内联 style 属性）。 */
+function centerBar(v, max, cls) {
+  const fill = h('span', { class: `cfill ${v < 0 ? 'neg' : 'pos'} ${cls || ''}` });
+  fill.style.width = `${Math.min(50, (Math.abs(v) / max) * 50)}%`;
+  return h('span', { class: 'ctrack' }, fill);
+}
+
+function trackVerdict(rep) {
+  const s = rep.summary, o = s.overall, b = rep.benchmark;
+  if (!o || !o.n) return h('section', { class: 'card tv' }, h('p', null, t('track.v.none', { d: s.min_days_for_stats })));
+  const max = Math.max(Math.abs(o.ret_mean), Math.abs(o.bench_mean), 1);
+  const line = (label, v, cls) => h('div', { class: 'vrow' }, h('span', { class: 'vl' }, label), centerBar(v, max, cls),
+    h('b', { class: `num ${signCls(v)}` }, pctS(v)));
+  return h('section', { class: 'card tv' },
+    h('p', { class: 'tv-main' }, t(o.excess_mean >= 0 ? 'track.v.won' : 'track.v.lost',
+      { n: o.n, ret: pctS(o.ret_mean), b, bench: pctS(o.bench_mean), ex: Math.abs(o.excess_mean).toFixed(1), beat: Math.round(o.beat_rate) })),
+    line(t('track.v.ours'), o.ret_mean, 'ours'), line(b, o.bench_mean, 'bench'),
+    s.max_days < 90 ? h('p', { class: 'warn-line' }, t('track.v.young', { d: s.max_days })) : null,
+    h('p', { class: 'muted small' }, t('track.v.how', { b })));
+}
+
+function gradeTable(rep) {
+  const by = rep.summary.by_grade || {};
+  const keys = ['a', 'b', 'c', 'none'].filter((g) => by[g]?.n);
+  if (!keys.length) return null;
+  return h('section', { class: 'card' },
+    h('h3', null, t('track.g.title')),
+    h('p', { class: 'muted small' }, t('track.g.intro')),
+    h('div', { class: 'table-wrap flat' }, h('table', { class: 'mini' },
+      h('thead', null, h('tr', null, ['grade', 'n', 'ret', 'bench', 'excess', 'beat']
+        .map((k) => h('th', { class: k === 'grade' ? '' : k === 'bench' ? 'r hide-sm' : 'r' }, t(`track.g.c.${k}`, { b: rep.benchmark }))))),
+      h('tbody', null, keys.map((g) => {
+        const x = by[g];
+        return h('tr', { class: x.n < 10 ? 'thin' : '' },
+          h('td', { class: 'nowrap' }, g === 'none' ? t('grade.none') : [gradeChip(g), h('span', { class: 'hide-sm' }, ' ' + t(`grade.${g}`))]),
+          h('td', { class: 'r num' }, x.n),
+          h('td', { class: `r num ${signCls(x.ret_mean)}` }, pctS(x.ret_mean)),
+          h('td', { class: 'r num muted hide-sm' }, pctS(x.bench_mean)),
+          h('td', { class: `r num ${signCls(x.excess_mean)}` }, h('b', null, pctS(x.excess_mean))),
+          h('td', { class: 'r num' }, `${Math.round(x.beat_rate)}%`));
+      })))),
+    h('p', { class: 'muted small' }, t('track.g.note')));
+}
+
+function exitTable(rep) {
+  const ex = rep.summary.exits || {};
+  const keys = Object.keys(ex).sort((a, b) => ex[b].n - ex[a].n);
+  if (!keys.length) return null;
+  return h('section', { class: 'card' },
+    h('h3', null, t('track.x.title')),
+    h('p', { class: 'muted small' }, t('track.x.intro', { b: rep.benchmark })),
+    keys.map((k) => h('div', { class: 'xrow' },
+      h('span', { class: `badge t-${k}` }, tierLabel(k)),
+      h('span', { class: 'xmean' }, t(`track.x.${k}`) === `track.x.${k}` ? '' : t(`track.x.${k}`)),
+      h('span', { class: 'num muted' }, t('track.x.n', { n: ex[k].n })),
+      h('b', { class: `num ${signCls(ex[k].excess_during_mean)}` }, pctS(ex[k].excess_during_mean)))));
+}
+
+function bestWorst(rep) {
+  const rs = rep.entries.filter((e) => ripe(e, rep) && e.excess_since_pct != null)
+    .sort((a, b) => b.excess_since_pct - a.excess_since_pct);
+  if (rs.length < 4) return null;
+  const n = Math.min(5, Math.floor(rs.length / 2));
+  const list = (title, items) => h('div', null, h('h4', null, title), items.map((e) => h('div', { class: 'bw' },
+    h('b', null, e.ticker), gradeChip(e.grade), h('span', { class: 'muted small' }, t('track.days', { d: e.days })),
+    h('span', { class: `num ${signCls(e.excess_since_pct)}` }, pctS(e.excess_since_pct)))));
+  return h('section', { class: 'card' }, h('h3', null, t('track.bw.title'), h('small', null, t('track.bw.sub', { b: rep.benchmark }))),
+    h('div', { class: 'bw-cols' }, list(t('track.bw.best'), rs.slice(0, n)), list(t('track.bw.worst'), rs.slice(-n).reverse())));
+}
+
+const TRACK_TABS = {
+  ripe: (e, rep) => ripe(e, rep),
+  open: (e) => e.status === 'open',
+  exited: (e) => e.status === 'exited',
+  young: (e, rep) => !ripe(e, rep),
+};
+const TRACK_COLS = [
+  { key: 'ticker', get: (e) => e.ticker },
+  { key: 'grade', get: (e) => e.grade || 'z' },
+  { key: 'flagged', get: (e) => e.flagged_at, cls: 'hide-sm' },
+  { key: 'days', get: (e) => e.days, cls: 'r' },
+  { key: 'ret', get: (e) => e.return_since_pct, cls: 'r' },
+  { key: 'bench', get: (e) => e.bench_since_pct, cls: 'r hide-sm' },
+  { key: 'excess', get: (e) => e.excess_since_pct, cls: 'r' },
+  { key: 'status', get: (e) => (e.status === 'open' ? '' : e.exit_tier || 'z') },
+];
+
+function trackList(rep) {
+  const v = state.trackView || (state.trackView = { tab: 'ripe', sort: 'excess', dir: 'desc' });
+  const box = h('section', { class: 'card' });
+  const draw = () => {
+    const col = TRACK_COLS.find((c) => c.key === v.sort);
+    const rows = rep.entries.filter((e) => TRACK_TABS[v.tab](e, rep)).sort((a, b) => {
+      const [x, y] = [col.get(a), col.get(b)];
+      if (x == null) return 1; if (y == null) return -1;
+      return cmp(x, y) * (v.dir === 'asc' ? 1 : -1);
+    });
+    fill(box,
+      h('h3', null, t('track.list.title')),
+      h('div', { class: 'tabs', role: 'tablist' }, Object.keys(TRACK_TABS).map((k) => h('button', {
+        role: 'tab', 'aria-selected': v.tab === k, class: v.tab === k ? 'on' : '',
+        onclick: () => { v.tab = k; draw(); },
+      }, t(`track.tab.${k}`, { n: rep.entries.filter((e) => TRACK_TABS[k](e, rep)).length })))),
+      v.tab === 'young' ? h('p', { class: 'muted small' }, t('track.tab.young_note', { d: rep.summary.min_days_for_stats })) : null,
+      rows.length ? h('div', { class: 'table-wrap flat' }, h('table', { class: 'mini track' },
+        h('thead', null, h('tr', null, TRACK_COLS.map((c) => {
+          const active = v.sort === c.key;
+          return h('th', { class: c.cls, 'aria-sort': active ? (v.dir === 'asc' ? 'ascending' : 'descending') : 'none' },
+            h('button', { onclick: () => { v.dir = active && v.dir === 'desc' ? 'asc' : 'desc'; v.sort = c.key; draw(); } },
+              t(`track.c.${c.key}`, { b: rep.benchmark })));
+        }))),
+        h('tbody', null, rows.map((e) => h('tr', null,
+          h('td', null, h('b', null, e.ticker), e.nth > 1 ? h('small', { class: 'muted' }, ' ' + t('track.nth', { n: e.nth })) : null),
+          h('td', null, gradeChip(e.grade) || h('span', { class: 'muted' }, '—')),
+          h('td', { class: 'num hide-sm' }, e.flagged_at.slice(0, 10)),
+          h('td', { class: 'r num' }, e.days ?? '—'),
+          h('td', { class: `r num ${signCls(e.return_since_pct)}` }, pctS(e.return_since_pct)),
+          h('td', { class: 'r num muted hide-sm' }, pctS(e.bench_since_pct)),
+          h('td', { class: `r num ${signCls(e.excess_since_pct)}` }, h('b', null, pctS(e.excess_since_pct))),
+          h('td', null, e.status === 'open' ? t('track.open') : t('track.exited', { tier: tierLabel(e.exit_tier) })))))))
+        : h('p', { class: 'muted' }, t('track.list.empty')));
+  };
+  draw();
+  return box;
+}
+
+function drawTrack() {
+  const rep = state.track, s = rep.summary;
+  fill($('track-body'),
     h('h2', null, t('track.title')),
     h('p', { class: 'muted small' }, t('track.intro', { b: rep.benchmark })),
-    s.total ? h('div', { class: 'stats' },
-      stat(t('track.s1'), s.return_since), stat(t('track.s2', { b: rep.benchmark }), s.excess_since), stat(t('track.s3'), s.excess_during)) : null,
-    h('div', { class: 'warnbox' }, `⚠ ${rep.caveat} ${t('track.count', { t: s.total, m: s.mature_90d })}`),
-    s.total ? h('div', { class: 'table-wrap' }, h('table', { class: 'mini' },
-      h('thead', null, h('tr', null, ['ticker', 'flagged', 'entry', 'last', 'ret', 'excess', 'status'].map((k) => h('th', null, t(`track.c.${k}`))))),
-      h('tbody', null, rep.entries.map((e) => h('tr', null,
-        h('td', null, h('b', null, e.ticker)),
-        h('td', { class: 'num' }, e.flagged_at.slice(0, 10)),
-        h('td', { class: 'num' }, e.flag_price?.toFixed(2)),
-        h('td', { class: 'num' }, e.last_price?.toFixed(2) ?? '—'),
-        h('td', { class: `num ${signCls(e.return_since_pct)}` }, pct(e.return_since_pct)),
-        h('td', { class: `num ${signCls(e.excess_since_pct)}` }, pct(e.excess_since_pct)),
-        h('td', null, e.status === 'open' ? t('track.open') : t('track.exited', { tier: tierLabel(e.exit_tier) })))))))
-      : h('p', { class: 'muted' }, t('track.empty')));
+    s.total ? [trackVerdict(rep), gradeTable(rep), bestWorst(rep), exitTable(rep), trackList(rep)]
+      : h('p', { class: 'muted' }, t('track.empty')),
+    h('div', { class: 'warnbox' }, `⚠ ${rep.caveat} ${t('track.count', { t: s.total, m: s.mature_90d })}`));
 }
 
 async function openHistory() {
