@@ -120,6 +120,12 @@ def test_security_headers(app):
     assert r.headers["Cache-Control"] == "no-store"
 
 
+def test_page_and_scripts_revalidate_after_deploys(app):
+    c = app.test_client()
+    for path in ("/", "/static/app.js", "/static/styles.css"):
+        assert c.get(path).headers["Cache-Control"] == "no-cache", path
+
+
 def test_csp_allows_cloudflare_web_analytics(app):
     csp = app.test_client().get("/api/health").headers["Content-Security-Policy"]
     directives = {d.split()[0]: d.split()[1:] for d in csp.split("; ")}

@@ -75,6 +75,10 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         if request.path.startswith("/api/"):
             resp.headers["Cache-Control"] = "no-store"
             resp.headers["Vary"] = "Accept-Language"
+        else:
+            # 页面和脚本每次都用 ETag 向服务器确认（没变时只回 304）。否则 CDN 默认让浏览器缓存 4 小时，
+            # 部署后用户会拿着旧脚本看新数据。
+            resp.headers["Cache-Control"] = "no-cache"
         return resp
 
     # ------------------------------------------------------------ 页面
