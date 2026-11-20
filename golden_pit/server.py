@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import hmac
 import io
 from functools import wraps
@@ -22,6 +23,16 @@ from .scheduler import Scheduler
 from .scoring import TIER_ORDER, TIERS
 
 WEB_DIR = Path(__file__).resolve().parent / "web"
+
+
+def _asset_version() -> str:
+    """前端文件内容的短哈希。Cloudflare 会让浏览器把 .js/.css 缓存 4 小时（盖过源站的 Cache-Control），
+    所以页面里的脚本和样式地址带上 ?v=<哈希>：一部署地址就变，浏览器直接取新文件。"""
+    h = hashlib.sha256()
+    for f in sorted(WEB_DIR.glob("*")):
+        if f.is_file():
+            h.update(f.name.encode() + f.read_bytes())
+    return h.hexdigest()[:10]
 LOOPBACK = {"127.0.0.1", "::1"}
 
 
@@ -82,12 +93,19 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         return resp
 
     # ------------------------------------------------------------ 页面
+    ver = _asset_version()
+    page = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+    page = page.replace('"/static/styles.css"', f'"/static/styles.css?v={ver}"').replace('"/static/app.js"', f'"/static/app.js?v={ver}"')
+    app_js = (WEB_DIR / "app.js").read_text(encoding="utf-8").replace("'./i18n.js'", f"'./i18n.js?v={ver}'")
+
     @app.get("/")
     def index():
-        return send_from_directory(WEB_DIR, "index.html")
+        return Response(page, mimetype="text/html")
 
     @app.get("/static/<path:name>")
     def static_files(name):
+        if name == "app.js":        # 模块里 import 的 i18n.js 也要带版本号
+            return Response(app_js, mimetype="text/javascript")
         return send_from_directory(WEB_DIR, name)
 
     # ------------------------------------------------------------ 只读 API

@@ -126,6 +126,18 @@ def test_page_and_scripts_revalidate_after_deploys(app):
         assert c.get(path).headers["Cache-Control"] == "no-cache", path
 
 
+def test_asset_urls_change_when_frontend_changes(app):
+    """CDN 会让浏览器缓存 .js/.css 4 小时；地址带内容哈希，部署后才会拿到新文件。"""
+    import re
+    c = app.test_client()
+    page = c.get("/").get_data(as_text=True)
+    ver = re.search(r'/static/app\.js\?v=([0-9a-f]{10})"', page).group(1)
+    assert f'/static/styles.css?v={ver}"' in page
+    js = c.get(f"/static/app.js?v={ver}")
+    assert js.mimetype == "text/javascript" and f"'./i18n.js?v={ver}'" in js.get_data(as_text=True)
+    assert c.get(f"/static/i18n.js?v={ver}").status_code == 200
+
+
 def test_csp_allows_cloudflare_web_analytics(app):
     csp = app.test_client().get("/api/health").headers["Content-Security-Policy"]
     directives = {d.split()[0]: d.split()[1:] for d in csp.split("; ")}
