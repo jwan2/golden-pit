@@ -215,7 +215,7 @@ td.up { color: var(--pass); } td.down { color: var(--fail); }
 .grade { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 12px; font-weight: 700;
   text-align: center; border: 1.5px solid currentColor; vertical-align: 1px; }
 .g-a { color: var(--pass); } .g-b { color: var(--t-wait); } .g-c { color: var(--muted); }
-.verdict-cell .gaps { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.verdict-cell .gaps { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: normal; min-width: 150px; max-width: 210px; }
 tr.grp td { background: var(--surface-2); color: var(--text); font-size: 13px; padding: 7px 12px; cursor: default; white-space: normal; }
 tr.grp:hover { background: none; }
 tr.grp b { color: var(--t-golden); }
