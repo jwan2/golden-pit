@@ -260,3 +260,68 @@ table.track tbody tr { cursor: default; }
   .xrow { grid-template-columns: auto 1fr 60px; } .xrow .xmean { display: none; }
   .verdict-cell .gaps { white-space: normal; max-width: 140px; }
 }
+
+/* ---------- 大盘 ---------- */
+dialog.xwide { width: min(980px, calc(100vw - 32px)); }
+.mk-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+.mk-card { display: block; text-align: left; padding: 10px 12px; border-radius: var(--radius); background: var(--surface-2); }
+.mk-card.on { border-color: var(--accent); background: var(--accent-bg); }
+.mk-card .mk-name { font-weight: 600; font-size: 14px; }
+.mk-card .mk-last { font-size: 13px; color: var(--muted); }
+.mk-card .mk-dd { font-size: 22px; font-weight: 700; line-height: 1.3; }
+.mk-card .mk-dd small { font-size: 12px; font-weight: 400; color: var(--muted); }
+.mk-card .warn, .small.warn { color: var(--unknown); }
+.down.strong { font-weight: 700; }
+.n.down, div.down, td.down, span.down { color: var(--fail); }
+table.mk-m7 { margin: 10px 0 14px; width: 100%; }
+table.mk-m7 tbody tr { cursor: pointer; }
+table.mk-m7 tbody tr.on td { background: var(--accent-bg); }
+.mk-detail h3 { font-size: 16px; }
+.mk-ranges { margin-top: 8px; }
+.mk-chart { min-height: 120px; }
+.mk-plot { position: relative; touch-action: pan-y; }
+.mk-cap { margin: 6px 0 0; }
+.mk-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mk-grid { stroke: var(--line); stroke-width: 1; }
+.mk-zero { stroke: var(--muted); stroke-width: 1; }
+.mk-dd-area { fill: var(--fail); opacity: .16; }
+.mk-dd-line { fill: none; stroke: var(--fail); stroke-width: 1.4; stroke-linejoin: round; }
+.mk-now { stroke: var(--fail); stroke-dasharray: 4 4; stroke-width: 1; }
+.mk-now-lbl { fill: var(--fail); font-weight: 600; }
+.mk-cross { stroke: var(--muted); stroke-width: 1; }
+.mk-tip { position: absolute; top: 2px; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px 10px; font-size: 12px; display: flex; gap: 10px; white-space: nowrap; box-shadow: var(--shadow); pointer-events: none; }
+.mk-sec { margin-top: 18px; }
+.mk-sec h4 { font-size: 14px; color: var(--text); margin: 0 0 4px; }
+.gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.gauge { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.gauge p { margin-top: 6px; }
+.g-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.g-top b { font-size: 18px; }
+.g-track { position: relative; height: 10px; border-radius: 5px; background: var(--line); margin: 8px 0 2px; }
+.g-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 20%; border-radius: 5px 0 0 5px; background: var(--t-error-bg); }
+.g-mark { position: absolute; top: -4px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: var(--text); }
+.g-mark.warm { background: var(--t-trap); } .g-mark.ext { background: var(--fail); }
+.g-ends { display: flex; justify-content: space-between; }
+.strip-wrap { margin: 18px 6px 4px; }
+.strip { position: relative; height: 26px; border-bottom: 1px solid var(--muted); }
+.sdot { position: absolute; bottom: 4px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+  background: var(--t-wait); border: 2px solid var(--surface); opacity: .85; }
+.snow, .smed { position: absolute; bottom: -4px; top: -14px; border-left: 2px solid var(--fail); }
+.smed { border-left: 2px dashed var(--muted); }
+.snow i, .smed i { position: absolute; top: -6px; left: 4px; font-style: normal; font-size: 11px; color: var(--fail); white-space: nowrap; }
+.smed i { color: var(--muted); top: auto; bottom: 12px; }
+.strip-ticks { position: relative; height: 18px; }
+.strip-ticks span { position: absolute; transform: translateX(-50%); top: 2px; }
+table.mk-ladder, table.mk-eps { width: 100%; }
+table.mk-ladder tr.hit td, table.mk-eps tr.hit td { background: var(--t-error-bg); }
+table.mk-ladder td small, table.mk-eps td small { font-size: 11px; }
+@media (max-width: 760px) {
+  .mk-cards { grid-template-columns: 1fr 1fr; }
+  .mk-card .mk-dd { font-size: 18px; }
+  .mk-detail { padding: 12px 10px; }
+  dialog.xwide .dlg-body { padding-left: 14px; padding-right: 14px; }
+  table.mk-ladder td, table.mk-ladder th, table.mk-eps td, table.mk-eps th { padding: 4px 5px; font-size: 13px; }
+  table.mk-ladder td.nowrap { white-space: normal; }
+  table.mk-ladder td small { display: block; }
+}

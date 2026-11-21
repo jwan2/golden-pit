@@ -19,6 +19,7 @@ from .ai import AIError
 from .config import Settings
 from .engine import Engine
 from .i18n import LANGS, M, msg_of, normalize_lang, render, tr
+from .market import GROUPS as MARKET_GROUPS, Market
 from .scheduler import Scheduler
 from .scoring import TIER_ORDER, TIERS
 
@@ -36,15 +37,18 @@ def _asset_version() -> str:
 LOOPBACK = {"127.0.0.1", "::1"}
 
 
-def create_app(settings: Settings, engine: Engine | None = None, scheduler: Scheduler | None = None) -> Flask:
+def create_app(settings: Settings, engine: Engine | None = None, scheduler: Scheduler | None = None,
+               market: Market | None = None) -> Flask:
     app = Flask(__name__, static_folder=None)
     app.json.sort_keys = False          # 保持档位等字典的定义顺序
     engine = engine or Engine(settings)
     store, scanner, ai = engine.store, engine.scanner, engine.ai
     th, sc = engine.thresholds, engine.screener
     scheduler = scheduler or Scheduler(settings.slots, lambda: scanner.start(settings.scheduled_mode, trigger="scheduled"))
+    market = market or Market(settings.data_dir)
     if settings.scheduler_enabled:
         scheduler.start()
+        market.prewarm()            # 线上第一次打开"大盘"时就不用等取数
 
     def lang() -> str:
         q = request.args.get("lang")
@@ -174,6 +178,21 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
     def track():
         return out(**engine.track_report())
 
+    @app.get("/api/market/<group>")
+    def market_group(group):
+        """大盘：us（三大指数 + VIX）| m7（七巨头）| cn（A 股指数）。第一次还没算好时返回 pending，前端稍后再取。"""
+        if group not in MARKET_GROUPS:
+            abort(404)
+        data = market.group(group)
+        return out(**data) if data else out(pending=True, group=group)
+
+    @app.get("/api/market/series/<key>")
+    def market_series(key):
+        data = market.series(key)
+        if data is None:
+            abort(404)
+        return jsonify(data)
+
     @app.get("/api/ai")
     def ai_all():
         """最新扫描中所有已有的 AI 研判（当前语言；附是否过期）。"""
@@ -273,7 +292,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         return Response("\n".join(lines), mimetype="text/markdown; charset=utf-8",
                         headers={"Content-Disposition": f'attachment; filename="golden_pit_{scan["scan_id"]}.md"'})
 
-    app.extensions["golden_pit"] = {"engine": engine, "scheduler": scheduler}
+    app.extensions["golden_pit"] = {"engine": engine, "scheduler": scheduler, "market": market}
     return app
 
 

@@ -41,6 +41,7 @@ Free market data is messy. Golden Pit refuses to guess:
 - **Entry planner**: −30% / −40% / −50% tranches from the 52-week high, sized from your own capital and position cap. It is a discipline template, not advice.
 - **A / B / C priority among golden pits.** No score: it counts 5 margin conditions (full financial and management marks, both valuation anchors, no missing data, not still falling) and shows exactly which ones a stock misses. The verdict itself never changes.
 - **Forward track record.** Every golden-pit call is logged with its price and compared to SPY going forward, with the grade at the time so A/B/C can be checked against each other. This replaces a backtest: free data has no point-in-time fundamentals, so a backtest would be look-ahead-biased.
+- **Markets page.** S&P 500 / Nasdaq / Dow, the Magnificent 7 and China A-share indices (SSE, ChiNext, STAR 50, CSI 300): price and drawdown charts, max drawdowns, every past decline, and a by-depth table of what happened after each level was first hit (further fall, 1y / 3y later). Drawdown depth, distance from the 200-day average and VIX are each shown as a historical percentile, never blended into a score. History, not a forecast.
 - **Optional AI research notes** via Command Code CLI or any OpenAI-compatible API. The model sees only our computed snapshot, output is schema-validated, and notes are labelled *opinion, not part of the verdict*.
 - **CLI and MCP server**, so Claude Code and other agents can call it directly.
 - **Bilingual (English / 中文)** everywhere: web UI with a language toggle, CLI (`--lang`), API (`?lang=`), MCP, exports and AI notes.
@@ -129,6 +130,7 @@ Use a single worker. Scan state and the scheduler live in-process.
 - **买入计划器**：以 52 周高点为锚分三档；输入你的资金和单只上限，换算金额和股数。是纪律模板，不是建议
 - **黄金坑分 A / B / C 三档**：不打总分，只数 5 项余量条件（财务满分、管理层满分、估值双锚、数据完整、不在下跌中）满足了几项，并列出差在哪；判定本身不变
 - **战绩追踪**：每次判为黄金坑都记录价格，之后持续与 SPY 对比，并按入选时的 A/B/C 分开统计。免费数据没有历史时点财报，回测会有前视偏差，所以用前向记录代替
+- **大盘**：标普 500 / 纳指 / 道指、七巨头、A 股指数（上证、创业板、科创 50、沪深 300）的走势和回撤图、历史最大回撤、历次下跌，以及“每一档第一次跌到之后又跌了多少、1 年 / 3 年后涨跌”的分档表。回撤深度、距 200 日均线、VIX 各自给出历史百分位，不合成分数。是历史统计，不是预测
 - **AI 研判（可选）**：支持 Command Code CLI 或任意 OpenAI 兼容接口。模型只能看我们算好的快照，输出逐字段校验，标注"观点·不计入判定"
 - **命令行和 MCP server**：Claude Code 等 AI 客户端可直接调用
 - **中英双语**：网页（右上角一键切换）、命令行（`--lang zh`）、接口（`?lang=zh`）、MCP、导出和 AI 研判都支持

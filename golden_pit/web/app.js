@@ -801,6 +801,340 @@ function pollStatus() {
   tick(); state.polling = setInterval(tick, 1500);
 }
 
+// ---------------------------------------------------------------- 大盘
+// 三大指数 / 七巨头 / A 股：走势、回撤、"钟摆"指标、历史分档。全部是历史统计，不合成分数。
+const MK_TABS = ['us', 'm7', 'cn'];
+const MK_RANGES = { '1y': 365, '3y': 1095, '10y': 3652, all: null };
+const mk = { tab: 'us', data: {}, sel: { us: 'spx', m7: 'nvda', cn: 'cyb' }, range: '10y', series: {}, showAllEp: false };
+
+const mkName = (key) => t(`mk.n.${key}`);
+const ddCls = (v) => (v == null ? '' : v <= -20 ? 'down strong' : v < 0 ? 'down' : '');
+const numL = (v, d = 2) => (v == null ? '—' : Number(v).toLocaleString(LANG === 'zh' ? 'zh-CN' : 'en-US', { maximumFractionDigits: d }));
+const pct0 = pctS;
+
+async function openMarket() {
+  $('dlg-market').showModal();
+  drawMarket();
+  loadMarket(mk.tab);
+}
+
+async function loadMarket(g, tries = 0) {
+  try {
+    const d = await api(`/api/market/${g}`);
+    if (d.pending) {
+      mk.data[g] = { pending: true };
+      if (tries < 45 && $('dlg-market').open) setTimeout(() => loadMarket(g, tries + 1), 4000);
+    } else {
+      mk.data[g] = d;
+    }
+  } catch (e) { mk.data[g] = { error: e.message }; }
+  if (mk.tab === g && $('dlg-market').open) drawMarket();
+}
+
+function drawMarket() {
+  const g = mk.tab, d = mk.data[g];
+  const head = [
+    h('h2', null, t('mk.title')),
+    h('p', { class: 'muted small' }, t('mk.intro')),
+    h('div', { class: 'tabs', role: 'tablist' }, MK_TABS.map((k) => h('button', {
+      role: 'tab', 'aria-selected': k === g, class: k === g ? 'on' : '',
+      onclick: () => { mk.tab = k; mk.showAllEp = false; drawMarket(); if (!mk.data[k] || mk.data[k].error) loadMarket(k); },
+    }, t(`mk.tab.${k}`))))];
+  const box = $('market-body');
+  if (!d || d.pending) return fill(box, head, h('p', { class: 'muted' }, t(d?.pending ? 'mk.pending' : 'loading')));
+  if (d.error) return fill(box, head, h('p', { class: 'error' }, d.error));
+  const ok = d.items.filter((it) => it.last != null);
+  const sel = ok.find((it) => it.key === mk.sel[g]) || ok[0];
+  fill(box, head,
+    h('p', { class: 'muted small' }, t('mk.updated', { when: fmt.when(d.updated_at) }), d.refreshing ? ` · ${t('mk.refreshing')}` : ''),
+    g === 'm7' ? m7Table(d.items, sel) : mkCards(d.items, sel),
+    sel ? mkDetail(sel, g === 'us' ? d.vix : null) : null,
+    h('div', { class: 'warnbox' }, '⚠ ', t('mk.caveat')),
+    h('p', { class: 'muted small' }, t(g === 'cn' ? 'mk.src.cn' : 'mk.src.us')));
+  if (sel) requestAnimationFrame(drawMkChart);
+}
+
+function pick(key) {
+  mk.sel[mk.tab] = key; mk.showAllEp = false;
+  drawMarket();
+  $('mk-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function mkCards(items, sel) {
+  return h('div', { class: 'mk-cards' }, items.map((it) => h('button', {
+    class: `mk-card${it === sel ? ' on' : ''}`, 'aria-pressed': it === sel, disabled: it.last == null,
+    onclick: () => pick(it.key),
+  },
+  h('div', { class: 'mk-name' }, mkName(it.key)),
+  it.last == null ? h('div', { class: 'error small' }, it.error) : [
+    h('div', { class: 'mk-last num' }, numL(it.last)),
+    h('div', { class: `mk-dd num ${ddCls(it.dd_ath)}` }, pct0(it.dd_ath), h('small', null, ` ${t('mk.from_high')}`)),
+    it.cur && it.cur.dd !== it.dd_ath ? h('div', { class: 'small' }, t('mk.cur_swing', { v: pct0(it.cur.dd) })) : null,
+    h('div', { class: 'small muted' }, t('mk.mdd_short', { v: pct0(it.mdd?.depth), y: it.mdd?.trough_date.slice(0, 4) ?? '—' })),
+    it.stale ? h('div', { class: 'small warn' }, t('mk.stale')) : null])));
+}
+
+function m7Table(items, sel) {
+  return h('div', { class: 'table-wrap flat' }, h('table', { class: 'mini mk-m7' },
+    h('thead', null, h('tr', null,
+      h('th', null, t('mk.c.name')), h('th', { class: 'r' }, t('mk.c.last')), h('th', { class: 'r' }, t('mk.c.dd')),
+      h('th', { class: 'r' }, t('mk.c.mdd')), h('th', { class: 'r hide-sm' }, t('mk.c.mdd10')), h('th', { class: 'r hide-sm' }, t('mk.c.days')))),
+    h('tbody', null, items.map((it) => (it.last == null
+      ? h('tr', null, h('td', null, mkName(it.key)), h('td', { class: 'error small', colspan: 5 }, it.error))
+      : h('tr', {
+        class: it === sel ? 'on' : '', tabindex: 0, onclick: () => pick(it.key),
+        onkeydown: (e) => { if (e.key === 'Enter') pick(it.key); },
+      },
+      h('td', null, h('b', null, it.symbol), h('span', { class: 'muted hide-sm' }, ` ${mkName(it.key)}`)),
+      h('td', { class: 'r num' }, numL(it.last)),
+      h('td', { class: `r num ${ddCls(it.dd_ath)}` }, h('b', null, pct0(it.dd_ath))),
+      h('td', { class: 'r num' }, pct0(it.mdd?.depth), h('small', { class: 'muted' }, ` ${it.mdd?.trough_date.slice(0, 4) ?? ''}`)),
+      h('td', { class: 'r num hide-sm' }, pct0(it.mdd_10y?.depth), h('small', { class: 'muted' }, ` ${it.mdd_10y?.trough_date.slice(0, 4) ?? ''}`)),
+      h('td', { class: 'r num hide-sm' }, it.cur.dd < 0 ? t('mk.ndays', { n: it.cur.days }) : t('mk.at_high'))))))));
+}
+
+function mkDetail(it, vix) {
+  return h('section', { class: 'card mk-detail', id: 'mk-detail' },
+    h('h3', null, h('span', null, mkName(it.key)), h('small', null, `${it.symbol} · ${t('mk.since', { d: it.first_date })}`)),
+    mkFacts(it),
+    it.key === 'dji' ? h('p', { class: 'muted small' }, t('mk.note.dji')) : null,
+    it.group === 'm7' ? h('p', { class: 'muted small' }, t('mk.note.m7')) : null,
+    h('div', { class: 'tabs mk-ranges' }, Object.keys(MK_RANGES).map((r) => h('button', {
+      class: mk.range === r ? 'on' : '', 'aria-pressed': mk.range === r,
+      onclick: (e) => {
+        mk.range = r;
+        for (const b of e.currentTarget.parentNode.children) { b.classList.toggle('on', b === e.currentTarget); b.setAttribute('aria-pressed', b === e.currentTarget); }
+        drawMkChart();
+      },
+    }, t(`mk.r.${r}`)))),
+    h('div', { id: 'mk-chart', class: 'mk-chart', 'data-key': it.key }),
+    pendulum(it, vix),
+    halfway(it),
+    ladderTable(it),
+    episodesTable(it),
+    h('p', { class: 'muted small' }, t(it.u ? 'mk.def.cn' : 'mk.def', { t: it.t, u: it.u })));
+}
+
+function mkFacts(it) {
+  const stat = (label, big, sub, cls) => h('div', { class: 'stat' }, h('div', { class: 'l' }, label),
+    h('div', { class: `n num ${cls || ''}` }, big), sub ? h('div', { class: 'small muted' }, sub) : null);
+  const m = it.mdd, m10 = it.mdd_10y, c = it.cur;
+  const rec = (x) => (x.recover_date ? t('mk.recovered', { d: x.recover_date }) : t('mk.not_recovered'));
+  return h('div', { class: 'stats' },
+    stat(t('mk.s.dd'), pct0(it.dd_ath), t('mk.s.dd_sub', { v: numL(it.ath), d: it.ath_date }), ddCls(it.dd_ath)),
+    c.dd !== it.dd_ath ? stat(t('mk.s.cur'), pct0(c.dd), t('mk.s.cur_sub', { v: numL(c.peak), d: c.peak_date }), ddCls(c.dd)) : null,
+    m ? stat(t('mk.s.mdd'), pct0(m.depth), `${m.peak_date} → ${m.trough_date} · ${rec(m)}`, 'down') : null,
+    m10 ? stat(t('mk.s.mdd10'), pct0(m10.depth), `${m10.peak_date} → ${m10.trough_date} · ${rec(m10)}`, 'down') : null);
+}
+
+// ---------- 走势图 + 水下图（回撤）：两张图共用横轴，一根十字线
+function niceStep(span, n) {
+  const raw = span / n, p = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || p * 10;
+}
+function linTicks(lo, hi, n) {
+  const s = niceStep(hi - lo || 1, n), out = [];
+  for (let v = Math.ceil(lo / s) * s; v <= hi + 1e-9; v += s) out.push(+v.toFixed(10));
+  return out;
+}
+function logTicks(lo, hi) {
+  const out = [];
+  for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) {
+    for (const m of [1, 2, 5]) { const v = m * 10 ** e; if (v >= lo && v <= hi) out.push(v); }
+  }
+  return out.length > 7 ? out.filter((v) => /^1/.test(String(v))) : out;
+}
+
+async function drawMkChart() {
+  const box = $('mk-chart');
+  if (!box) return;
+  const key = box.dataset.key;
+  let s = mk.series[key];
+  if (!s) {
+    fill(box, h('p', { class: 'muted small' }, t('loading')));
+    try { s = mk.series[key] = await api(`/api/market/series/${key}`); } catch (e) { fill(box, h('p', { class: 'error' }, e.message)); return; }
+    if (!box.isConnected || box.dataset.key !== key) return;
+  }
+  s.tm = s.tm || s.d.map((d) => Date.parse(d));
+  const n = s.tm.length, days = MK_RANGES[mk.range];
+  const from = days ? s.tm[n - 1] - days * 864e5 : -Infinity;
+  const i0 = Math.max(0, s.tm.findIndex((x) => x >= from));
+  const tm = s.tm.slice(i0), cs = s.c.slice(i0), dds = s.dd.slice(i0);
+  const W = Math.max(300, box.clientWidth || 680), L = 8, R = 58, T = 10, B = 22, H1 = 230, H2 = 120;
+  const log = !days;
+  const x = (v) => L + ((v - tm[0]) / (tm[tm.length - 1] - tm[0] || 1)) * (W - L - R);
+  let lo = Math.min(...cs), hi = Math.max(...cs);
+  const f = log ? Math.log : (v) => v;
+  const pad = (f(hi) - f(lo)) * 0.05 || 1;
+  const ylo = f(lo) - pad, yhi = f(hi) + pad;
+  const y1 = (v) => T + (1 - (f(v) - ylo) / (yhi - ylo)) * (H1 - T - B);
+  const ddLo = Math.min(-5, ...dds) * 1.06;
+  const y2 = (v) => 6 + (v / ddLo) * (H2 - 6 - B);
+  const line = (ys) => ys.map((yy, i) => `${i ? 'L' : 'M'}${x(tm[i]).toFixed(1)},${yy.toFixed(1)}`).join('');
+
+  // 横轴：按年份
+  const y0 = new Date(tm[0]).getUTCFullYear(), yN = new Date(tm[tm.length - 1]).getUTCFullYear();
+  const span = yN - y0 + 1;
+  const ystep = span <= 2 ? 0 : [1, 2, 5, 10, 20].find((st) => span / st <= 7) || 25;
+  const xt = [];
+  if (ystep) for (let yy = Math.ceil(y0 / ystep) * ystep; yy <= yN; yy += ystep) { const v = Date.UTC(yy, 0, 1); if (v >= tm[0]) xt.push([v, String(yy)]); }
+  else for (let k = 0; k <= 4; k++) { const v = tm[0] + (k / 4) * (tm[tm.length - 1] - tm[0]); xt.push([v, new Date(v).toISOString().slice(0, 7)]); }
+  const xAxis = (H) => xt.map(([v, lab]) => [
+    svg('line', { x1: x(v), x2: x(v), y1: 4, y2: H - B, class: 'mk-grid' }),
+    svg('text', { x: x(v), y: H - 6, class: 'ch-axis', 'text-anchor': 'middle' }, lab)]).flat();
+
+  const pTicks = log ? logTicks(lo, hi) : linTicks(lo, hi, 4);
+  const cross1 = svg('line', { y1: T, y2: H1 - B, class: 'mk-cross', visibility: 'hidden' });
+  const cross2 = svg('line', { y1: 4, y2: H2 - B, class: 'mk-cross', visibility: 'hidden' });
+  const dot = svg('circle', { r: 3.5, class: 'ch-dot', visibility: 'hidden' });
+  const last = cs[cs.length - 1], lastDd = dds[dds.length - 1];
+
+  const price = svg('svg', { viewBox: `0 0 ${W} ${H1}`, width: W, height: H1, class: 'mk-svg', role: 'img',
+    'aria-label': t('mk.aria.price', { n: mkName(key) }) },
+  ...xAxis(H1),
+  ...pTicks.flatMap((v) => [svg('line', { x1: L, x2: W - R, y1: y1(v), y2: y1(v), class: 'mk-grid' }),
+    svg('text', { x: W - R + 6, y: y1(v) + 4, class: 'ch-axis' }, numL(v, v < 10 ? 2 : 0))]),
+  svg('path', { d: line(cs.map(y1)), class: 'ch-line' }),
+  svg('circle', { cx: x(tm[tm.length - 1]), cy: y1(last), r: 3.5, class: 'ch-dot' }),
+  log ? svg('text', { x: L + 2, y: T + 10, class: 'ch-axis' }, t('mk.logscale')) : null,
+  cross1, dot);
+
+  const ddTicks = linTicks(ddLo, 0, 3).filter((v) => v < 0);
+  const under = svg('svg', { viewBox: `0 0 ${W} ${H2}`, width: W, height: H2, class: 'mk-svg', role: 'img',
+    'aria-label': t('mk.aria.dd', { n: mkName(key) }) },
+  ...xAxis(H2),
+  ...ddTicks.flatMap((v) => [svg('line', { x1: L, x2: W - R, y1: y2(v), y2: y2(v), class: 'mk-grid' }),
+    svg('text', { x: W - R + 6, y: y2(v) + 4, class: 'ch-axis' }, `${Math.round(v)}%`)]),
+  svg('path', { d: `${line(dds.map(y2))}L${x(tm[tm.length - 1]).toFixed(1)},${y2(0)}L${x(tm[0]).toFixed(1)},${y2(0)}Z`, class: 'mk-dd-area' }),
+  svg('path', { d: line(dds.map(y2)), class: 'mk-dd-line' }),
+  svg('line', { x1: L, x2: W - R, y1: y2(0), y2: y2(0), class: 'mk-zero' }),
+  lastDd < -1 ? svg('line', { x1: L, x2: W - R, y1: y2(lastDd), y2: y2(lastDd), class: 'mk-now' }) : null,
+  lastDd < -1 ? svg('text', { x: W - R + 6, y: y2(lastDd) + 4, class: 'ch-lbl mk-now-lbl' }, t('mk.now', { v: lastDd.toFixed(1) })) : null,
+  cross2);
+
+  const tip = h('div', { class: 'mk-tip', hidden: true });
+  const wrap = h('div', { class: 'mk-plot' }, h('div', { class: 'mk-cap small muted' }, t('mk.cap.price')), price,
+    h('div', { class: 'mk-cap small muted' }, t('mk.cap.dd')), under, tip);
+  const xs = tm.map(x);
+  const move = (e) => {
+    const r = price.getBoundingClientRect();
+    const px = (e.clientX - r.left) * (W / r.width);
+    let a = 0, b = xs.length - 1;
+    while (b - a > 1) { const m = (a + b) >> 1; if (xs[m] < px) a = m; else b = m; }
+    const i = Math.abs(xs[a] - px) < Math.abs(xs[b] - px) ? a : b;
+    for (const c of [cross1, cross2]) { c.setAttribute('x1', xs[i]); c.setAttribute('x2', xs[i]); c.setAttribute('visibility', 'visible'); }
+    dot.setAttribute('cx', xs[i]); dot.setAttribute('cy', y1(cs[i])); dot.setAttribute('visibility', 'visible');
+    fill(tip, h('b', null, s.d[i0 + i]), h('span', null, numL(cs[i])), h('span', { class: dds[i] < 0 ? 'down' : '' }, t('mk.tip.dd', { v: pct0(dds[i]) })));
+    tip.hidden = false;
+    const left = (xs[i] / W) * r.width;
+    tip.style.left = `${Math.min(Math.max(left, 70), r.width - 70)}px`;
+  };
+  const leave = () => { tip.hidden = true; for (const c of [cross1, cross2, dot]) c.setAttribute('visibility', 'hidden'); };
+  wrap.addEventListener('pointermove', move);
+  wrap.addEventListener('pointerdown', move);
+  wrap.addEventListener('pointerleave', leave);
+  fill(box, wrap);
+}
+
+let mkResize = null;
+window.addEventListener('resize', () => {
+  clearTimeout(mkResize);
+  mkResize = setTimeout(() => { if ($('dlg-market').open) drawMkChart(); }, 200);
+});
+
+// ---------- 钟摆：每个指标单独看它在历史里排第几，不合成分数
+function gauge(label, value, rank, text) {
+  const mark = h('span', { class: `g-mark ${rank == null ? '' : rank < 5 ? 'ext' : rank < 20 ? 'warm' : ''}` });
+  if (rank != null) mark.style.left = `${Math.min(100, Math.max(0, rank))}%`;
+  return h('div', { class: 'gauge' },
+    h('div', { class: 'g-top' }, h('span', null, label), h('b', { class: 'num' }, value)),
+    h('div', { class: 'g-track' }, h('span', { class: 'g-zone' }), rank == null ? null : mark),
+    h('div', { class: 'g-ends small muted' }, h('span', null, t('mk.g.rare')), h('span', null, t('mk.g.common'))),
+    h('p', { class: 'small' }, text));
+}
+
+function pendulum(it, vix) {
+  const p = it.pend || {};
+  const rows = [
+    p.dd_rank != null
+      ? gauge(t('mk.g.dd'), pct0(it.cur.dd), p.dd_rank, t('mk.g.dd_t', { r: p.dd_rank }))
+      : gauge(t('mk.g.dd'), pct0(it.cur.dd), null, t('mk.g.dd_none')),
+    p.ma200_gap != null ? gauge(t('mk.g.ma'), pct0(p.ma200_gap), p.ma200_rank, t('mk.g.ma_t', { r: p.ma200_rank })) : null,
+    vix ? gauge(t('mk.g.vix'), vix.last.toFixed(1), vix.above_rank,
+      t('mk.g.vix_t', { r: vix.above_rank, m: vix.median, x: vix.max, d: vix.max_date })) : null,
+  ];
+  return h('div', { class: 'mk-sec' }, h('h4', null, t('mk.g.title')), h('p', { class: 'muted small' }, t('mk.g.intro')),
+    h('div', { class: 'gauges' }, rows));
+}
+
+// ---------- 现在是不是半山腰：历史上跌到同样深度的那些轮次，最后跌到了哪儿
+function halfway(it) {
+  const x = it.here;
+  const sec = [h('h4', null, t('mk.h.title'))];
+  if (!x) return h('div', { class: 'mk-sec' }, sec, h('p', { class: 'small' }, t('mk.h.shallow', { v: pct0(it.cur.dd), t: it.t / 2 })));
+  if (!x.done) return h('div', { class: 'mk-sec' }, sec, h('p', { class: 'small' }, t('mk.h.none', { v: pct0(x.level) })));
+  const finals = x.finals || [];
+  const minV = Math.min(x.level, ...finals.map((q) => q.depth));
+  const lo = Math.floor(minV / 10) * 10 - 5;
+  const pos = (v) => `${(v / lo) * 100}%`;
+  const strip = h('div', { class: 'strip' });
+  for (const q of finals) {
+    const d = h('span', { class: 'sdot', title: t('mk.h.dot', { y: q.year, v: pct0(q.depth) }) });
+    d.style.left = pos(q.depth);
+    strip.append(d);
+  }
+  const now = h('span', { class: 'snow' }, h('i', null, t('mk.h.now')));
+  now.style.left = pos(x.level);
+  const med = h('span', { class: 'smed' }, h('i', null, t('mk.h.med')));
+  med.style.left = pos(x.final_median);
+  strip.append(now, med);
+  const ticks = h('div', { class: 'strip-ticks small muted' });
+  for (let v = 0; v >= lo; v -= lo < -60 ? 20 : 10) { const s = h('span', null, `${v}%`); s.style.left = pos(v); ticks.append(s); }
+  return h('div', { class: 'mk-sec' }, sec,
+    h('p', { class: 'small' }, t('mk.h.text', { v: pct0(x.level), n: x.n, done: x.done, fm: pct0(x.final_median), fw: pct0(x.final_worst),
+      fur: pct0(x.further_median), furw: pct0(x.further_worst) })),
+    h('div', { class: 'strip-wrap' }, strip, ticks),
+    x.fwd1y.n ? h('p', { class: 'small' }, t('mk.h.fwd', { n1: x.fwd1y.n, p1: x.fwd1y.pos, m1: pct0(x.fwd1y.median),
+      n3: x.fwd3y.n, p3: x.fwd3y.pos ?? '—', m3: pct0(x.fwd3y.median) })) : null);
+}
+
+// ---------- 历史分档：每一档第一次跌到时，之后发生了什么
+function ladderTable(it) {
+  const fwd = (f) => (f.n ? [h('span', { class: signCls(f.median) }, pct0(f.median)), h('small', { class: 'muted' }, ` ${t('mk.l.up', { p: f.pos, n: f.n })}`)] : '—');
+  return h('div', { class: 'mk-sec' }, h('h4', null, t('mk.l.title')), h('p', { class: 'muted small' }, t('mk.l.intro')),
+    h('div', { class: 'table-wrap flat' }, h('table', { class: 'mini mk-ladder' },
+      h('thead', null, h('tr', null, ['lv', 'n', 'stop', 'further', 'final', 'f1', 'f3'].map((k) => h('th', {
+        class: k === 'lv' ? '' : (k === 'stop' || k === 'final' ? 'r hide-sm' : 'r'),
+      }, t(`mk.l.c.${k}`))))),
+      h('tbody', null, it.ladder.map((r) => h('tr', { class: it.cur.dd <= r.level ? 'hit' : (r.n ? '' : 'thin') },
+        h('td', { class: 'num nowrap' }, h('b', null, pct0(r.level)), it.cur.dd <= r.level ? h('small', null, ` ${t('mk.l.reached')}`) : null),
+        h('td', { class: 'r num' }, r.n, r.ongoing ? h('small', { class: 'muted' }, ` ${t('mk.l.incl_now')}`) : null),
+        h('td', { class: 'r num hide-sm' }, r.stopped_before_next == null || !r.done ? '—' : `${r.stopped_before_next}/${r.done}`),
+        h('td', { class: 'r num' }, r.further_median == null ? '—' : [pct0(r.further_median), h('small', { class: 'muted' }, ` / ${pct0(r.further_worst)}`)]),
+        h('td', { class: 'r num hide-sm' }, pct0(r.final_median)),
+        h('td', { class: 'r num nowrap' }, fwd(r.fwd1y)),
+        h('td', { class: 'r num nowrap' }, fwd(r.fwd3y))))))),
+    h('p', { class: 'muted small' }, t('mk.l.howto')));
+}
+
+function episodesTable(it) {
+  const eps = it.episodes || [];
+  if (!eps.length) return null;
+  const shown = mk.showAllEp ? eps : eps.slice(0, 10);
+  return h('div', { class: 'mk-sec' }, h('h4', null, t('mk.e.title', { t: it.t, n: eps.length })),
+    h('div', { class: 'table-wrap flat' }, h('table', { class: 'mini mk-eps' },
+      h('thead', null, h('tr', null, ['peak', 'trough', 'depth', 'days', 'rec'].map((k) => h('th', { class: k === 'depth' ? 'r' : k === 'days' ? 'r hide-sm' : '' }, t(`mk.e.c.${k}`))))),
+      h('tbody', null, shown.map((e) => h('tr', { class: e.ongoing ? 'hit' : '' },
+        h('td', { class: 'num nowrap' }, e.peak_date),
+        h('td', { class: 'num nowrap' }, e.trough_date, e.ongoing ? h('small', { class: 'muted' }, ` ${t('mk.e.sofar')}`) : null),
+        h('td', { class: `r num ${ddCls(e.depth)}` }, h('b', null, pct0(e.depth))),
+        h('td', { class: 'r num hide-sm' }, t('mk.ndays', { n: e.days_down })),
+        h('td', { class: 'num nowrap' }, e.recover_date || (e.ongoing ? t('mk.e.ongoing') : t('mk.not_recovered')),
+          e.how === 'rebound' ? h('small', { class: 'muted' }, ` ${t('mk.e.rebound', { u: it.u })}`) : null)))))),
+    eps.length > 10 ? h('button', { class: 'plain small', onclick: () => { mk.showAllEp = !mk.showAllEp; drawMarket(); } },
+      t(mk.showAllEp ? 'mk.e.less' : 'mk.e.all', { n: eps.length })) : null);
+}
+
 // ---------------------------------------------------------------- 数据加载 / 总渲染
 function render() {
   renderFreshness(); renderBanner(); renderSummary(); renderChanges(); renderTable();
@@ -840,6 +1174,7 @@ async function init() {
   $('btn-lang').addEventListener('click', switchLang);
   $('btn-history').addEventListener('click', openHistory);
   $('btn-track').addEventListener('click', openTrack);
+  $('btn-market').addEventListener('click', openMarket);
   $('btn-method').addEventListener('click', () => $('dlg-method').showModal());
   $('scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('drawer').hidden) closeDrawer(); });
