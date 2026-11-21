@@ -92,6 +92,7 @@ class CachedProvider:
         cached = None if refresh else self._read("quote", ticker, self.quote_ttl)
         if cached:
             cached["closes"] = [tuple(x) for x in cached.get("closes", [])]
+            cached["splits"] = [tuple(x) for x in cached.get("splits", [])]
             return cached
         self._throttle()
         q = self._fetch_quote(ticker)          # 失败直接抛出，不回退旧数据

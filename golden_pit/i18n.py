@@ -275,6 +275,8 @@ CATALOG: dict[str, tuple[str, str]] = {
     # ---------------------------------------------------------- 错误
     "err.no_quote": ("{t}：没有行情数据（代码无效、已退市或停牌）", "{t}: no quote data (invalid, delisted or halted)"),
     "err.fetch": ("{t}：抓取失败（{e}）", "{t}: fetch failed ({e})"),
+    "err.price_mismatch": ("{t}：现价 {p} 与最近收盘价 {c} 相差 {x} 倍，数据口径不一致（多半正在拆股），本次不下结论",
+                           "{t}: price {p} and last close {c} differ {x}×, so the data is inconsistent (likely a split in progress); no verdict this time"),
     "err.analyze": ("{t}：分析出错（{e}）", "{t}: analysis error ({e})"),
     "err.timeout": ("{t}：扫描超时（>{m} 分钟）", "{t}: scan timed out (>{m} min)"),
     "err.bad_ticker": ("无效的股票代码：{t}", "Invalid ticker: {t}"),

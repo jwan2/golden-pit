@@ -1,8 +1,9 @@
 """Yahoo Finance 数据层。只负责取数并转成 RawStock，不做任何判断。
 
 拆成两部分，便于分别缓存：
-  quote         info（价格、估值、负债等快照）+ 近一年日收盘价   —— 变化快
-  fundamentals  三张年报 + 拆股记录                              —— 变化慢
+  quote         info（价格、估值、负债等快照）+ 近一年日收盘价 + 近一年拆股   —— 变化快
+  fundamentals  三张年报 + 全部拆股记录                                     —— 变化慢
+拆股在两边都取：年报缓存最长 7 天，拆股当天只有行情这边是新的（战绩复权靠它）。
 """
 from __future__ import annotations
 
@@ -91,7 +92,8 @@ def fetch_quote(ticker: str) -> dict:
         if not price:
             raise FetchError(M("err.no_quote", t=ticker))
         hist = _safe(lambda: t.history(period="1y", interval="1d", auto_adjust=False))
-        return {"info": info, "closes": _closes(hist), "fetched_at": now_iso()}
+        splits = _splits(hist["Stock Splits"]) if hist is not None and "Stock Splits" in getattr(hist, "columns", []) else []
+        return {"info": info, "closes": _closes(hist), "splits": splits, "fetched_at": now_iso()}
     return _retry(go, ticker)
 
 
@@ -110,11 +112,20 @@ def fetch_fundamentals(ticker: str) -> dict:
     return _retry(go, ticker)
 
 
+def merge_splits(*lists) -> list[tuple[str, float]]:
+    """按日期去重合并（同一天以后出现的为准），按日期升序。"""
+    by_day = {}
+    for xs in lists:
+        for d, r in xs or []:
+            by_day[str(d)[:10]] = float(r)
+    return sorted(by_day.items())
+
+
 def assemble(ticker: str, quote: dict, fund: dict) -> RawStock:
     return RawStock(
         ticker=ticker, info=quote["info"],
         balance=fund["balance"], income=fund["income"], cashflow=fund["cashflow"],
-        splits=fund["splits"], fetched_at=quote["fetched_at"],
+        splits=merge_splits(fund["splits"], quote.get("splits")), fetched_at=quote["fetched_at"],
         closes=quote.get("closes", []), fundamentals_fetched_at=fund["fetched_at"],
     )
 

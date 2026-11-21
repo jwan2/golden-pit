@@ -11,6 +11,9 @@
   入选期间   从入选到它掉出黄金坑那天（仍在坑里的算到现在）
 都是**价格收益**，不含股息；超额收益 = 个股收益 − 同期 SPY 收益。
 
+拆股：记录里存的是当时的真实成交价。之后发生拆/并股时，把拆股生效（当天美东 9:30）之前记下的
+入选价、离场价、现价都除以拆股比例，否则 1 拆 8 会被算成 -87%。每次拆股只调整一次（记在 splits_applied）。
+
 每条记录还记下入选那一刻的分档（A/B/C，见 rank.py），用来检验"A 是否真的比 C 好"。
 分档功能上线前的老记录，从仍保留的历史扫描里按当时的数据补算；历史已被清理的记为未分级。
 """
@@ -20,10 +23,11 @@ import json
 import os
 import tempfile
 import threading
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from statistics import median
 from typing import Callable, Optional
+from zoneinfo import ZoneInfo
 
 from . import rank
 from .i18n import M
@@ -31,6 +35,41 @@ from .i18n import M
 BENCHMARK = "SPY"
 MIN_DAYS_FOR_STATS = 7   # 追踪不足 7 天的记录只展示、不计入统计（当天收益恒为 0，会污染胜率）
 GROUPS = (*rank.GRADES, "none")
+ET = ZoneInfo("America/New_York")
+
+
+def _when(iso: Optional[str]) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(iso) if iso else None
+    except ValueError:
+        return None
+
+
+def _apply_splits(e: dict, splits) -> bool:
+    """把拆股生效前记下的价格换算成拆股后的口径。返回是否有改动。"""
+    applied = {d for d, _ in e.get("splits_applied", [])}
+    flagged = _when(e.get("flagged_at"))
+    changed = False
+    for day, ratio in splits or []:
+        day = str(day)[:10]
+        try:
+            d, ratio = date.fromisoformat(day), float(ratio)
+        except (TypeError, ValueError):
+            continue
+        if day in applied or ratio <= 0 or ratio == 1.0 or flagged is None:
+            continue
+        effective = datetime(d.year, d.month, d.day, 9, 30, tzinfo=ET)
+        if flagged >= effective:            # 拆股之后才入选：价格本来就是新口径
+            continue
+        e["flag_price"] = round(e["flag_price"] / ratio, 4)
+        for price_key, at_key in (("exit_price", "exited_at"), ("last_price", "last_at")):
+            at = _when(e.get(at_key))
+            if e.get(price_key) and at is not None and at < effective:
+                e[price_key] = round(e[price_key] / ratio, 4)
+        e.setdefault("splits_applied", []).append([day, ratio])
+        applied.add(day)
+        changed = True
+    return changed
 
 
 def _grade_of(r: Optional[dict]) -> Optional[str]:
@@ -84,6 +123,8 @@ class Tracker:
             # 1. 已追踪的：更新现价；本次扫描里明确不再是黄金坑的 → 记为离场
             for e in data["entries"]:
                 r = by_ticker.get(e["ticker"])
+                if r and r.get("splits"):
+                    _apply_splits(e, r["splits"])
                 p = r["price"] if r and r.get("price") else price(e["ticker"])
                 if p:
                     e["last_price"], e["last_at"] = p, now
@@ -125,6 +166,15 @@ class Tracker:
             e["grade"] = grades[sid].get(e["ticker"])
             changed = True
         return changed
+
+    def apply_splits(self, splits_by_ticker: dict[str, list]) -> int:
+        """手动补一次拆股复权（例如修正上线前已经记错的记录）。返回改动的记录数。"""
+        with self._lock:
+            data = self.load()
+            n = sum(_apply_splits(e, splits_by_ticker.get(e["ticker"])) for e in data["entries"])
+            if n:
+                self._save(data)
+            return n
 
     def ensure_grades(self) -> dict:
         """读取追踪数据；有老记录缺分档时补算并保存（只在第一次需要时写盘）。"""

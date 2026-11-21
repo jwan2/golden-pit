@@ -101,3 +101,16 @@ def test_diff_scans():
     assert d["left_golden_pit"] == [{"ticker": "A", "now": "quality_wait"}]
     assert d["new_tickers"] == ["C"]
     assert diff_scans(None, mk([]))["has_previous"] is False
+
+
+
+def test_split_day_mixed_data_gives_no_verdict(raw):
+    """2026-11-20 SNDK 拆股当天：日线已复权（≈94），现价还是拆股前（755）→ 不下结论，也就不会被记为掉出黄金坑。"""
+    raw.closes = [("2026-11-19", 12.5)]                 # 夹具现价 100，相差 8 倍
+    r = analyze.analyze_raw(raw, TH)
+    assert r["verdict"]["tier"] == "error" and "8.0" in render(r["error"], "en")
+
+
+def test_big_but_plausible_move_still_analyzed(raw):
+    raw.closes = [("2026-11-19", 160.0)]                # 一天跌 37.5%：罕见但真实，照常判定
+    assert analyze.analyze_raw(raw, TH)["verdict"]["tier"] == "golden_pit"

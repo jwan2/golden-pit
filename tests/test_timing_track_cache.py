@@ -300,3 +300,53 @@ def test_combined_universe_merges_and_survives_live_failure():
         raise RuntimeError("yahoo down")
     tickers, note = universe.combined(ScreenerConfig(), live=boom)
     assert tickers == base and "failed" in render(note, "en")
+
+
+# ---------------- 拆股复权
+def _sndk_tracker(tmp_path):
+    """真实案例：SNDK 2026-10-12 以 1487.33 入选，2026-11-20 开盘前以 755.16 掉出，当天 1 拆 8，收盘 79.24。"""
+    tr = Tracker(tmp_path)
+    tr._save({"entries": [{
+        "id": "SNDK-20261012_222614", "ticker": "SNDK", "status": "exited",
+        "flagged_at": "2026-10-12T22:26:14+00:00", "flag_price": 1487.33, "bench_flag": 100.0,
+        "exited_at": "2026-11-20T13:33:38+00:00", "exit_price": 755.16, "bench_exit": 100.0,
+        "last_price": 755.16, "last_at": "2026-11-20T13:33:38+00:00", "bench_last": 100.0}]})
+    return tr
+
+
+def test_split_adjusts_prices_recorded_before_it(tmp_path):
+    tr = _sndk_tracker(tmp_path)
+    after = {"ticker": "SNDK", "name": "SNDK", "price": 79.24, "verdict": {"tier": "fail"},
+             "splits": [["2026-11-20", 8.0]]}
+    tr.update({"scan_id": "x", "finished_at": "2026-11-20T21:18:39+00:00", "results": [after]}, lambda t: 100.0)
+    e = Tracker.report(tr.load())["entries"][0]
+    assert e["flag_price"] == 185.9162 and e["exit_price"] == 94.395            # 都换算成拆股后口径
+    assert e["return_since_pct"] == -57.38 and e["return_during_pct"] == -49.23  # 不再是 -94.7%
+    tr.update({"scan_id": "y", "finished_at": "2026-11-21T21:18:39+00:00", "results": [after]}, lambda t: 100.0)
+    assert tr.load()["entries"][0]["flag_price"] == 185.9162                   # 同一次拆股只调整一次
+
+
+def test_entries_flagged_after_split_are_untouched(tmp_path):
+    tr = Tracker(tmp_path)
+    r = {"ticker": "SNDK", "name": "SNDK", "price": 79.24, "verdict": {"tier": "golden_pit"},
+         "splits": [["2026-11-20", 8.0]]}
+    tr.update({"scan_id": "1", "finished_at": "2026-11-20T21:18:39+00:00", "results": [r]}, lambda t: 100.0)
+    tr.update({"scan_id": "2", "finished_at": "2026-11-21T21:18:39+00:00", "results": [r]}, lambda t: 100.0)
+    e = tr.load()["entries"][0]
+    assert e["flag_price"] == 79.24 and "splits_applied" not in e
+
+
+def test_manual_split_fix(tmp_path):
+    tr = _sndk_tracker(tmp_path)
+    assert tr.apply_splits({"SNDK": [("2026-11-20", 8.0)]}) == 1
+    assert tr.apply_splits({"SNDK": [("2026-11-20", 8.0)]}) == 0
+    assert tr.load()["entries"][0]["flag_price"] == 185.9162
+
+
+def test_quote_splits_are_merged_so_split_day_is_seen():
+    """年报缓存可能 7 天没刷新；拆股当天的拆股记录要从行情那边拿到。"""
+    from golden_pit.providers import yahoo
+    q = {"info": {}, "closes": [], "splits": [("2026-11-20", 8.0)], "fetched_at": "t"}
+    f = {"balance": Statement(), "income": Statement(), "cashflow": Statement(),
+         "splits": [("2020-01-02", 2.0)], "fetched_at": "t"}
+    assert yahoo.assemble("SNDK", q, f).splits == [("2020-01-02", 2.0), ("2026-11-20", 8.0)]

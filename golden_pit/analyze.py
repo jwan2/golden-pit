@@ -15,8 +15,18 @@ from .providers.yahoo import FetchError, fetch_raw
 from .scoring import decide
 
 
+# 现价与最近一个收盘价相差超过这个倍数，就认为两者不是同一口径（典型是拆股当天：
+# Yahoo 的日线已经复权，现价、市值、52 周高点却还是新旧口径混用）
+PRICE_MISMATCH_X = 1.8
+
+
 def analyze_raw(raw: RawStock, th: Thresholds) -> dict:
     facts = metrics.build_facts(raw)
+    last_close = raw.closes[-1][1] if raw.closes else None
+    if facts.get("price") and last_close and not 1 / PRICE_MISMATCH_X <= facts["price"] / last_close <= PRICE_MISMATCH_X:
+        # 拿混合口径的数据下结论会出大错（2026-11-20 SNDK：P/B 47.97、回撤 10.8%，被误判为掉出黄金坑）
+        return error_result(raw.ticker, M("err.price_mismatch", t=raw.ticker, p=facts["price"], c=last_close,
+                                          x=f"{max(facts['price'], last_close) / min(facts['price'], last_close):.1f}"))
     checks = metrics.build_checks(raw, th)
     verdict = decide(checks, facts, th)
     return rank.apply({
@@ -30,6 +40,7 @@ def analyze_raw(raw: RawStock, th: Thresholds) -> dict:
         "timing": analyze_timing(raw.closes),
         "chart": chart_series(raw.closes),
         "warnings": metrics.build_warnings(raw, facts),
+        "splits": [list(s) for s in raw.splits],       # 战绩追踪按它给拆股前记下的价格复权
         "fetched_at": raw.fetched_at,
         "fundamentals_fetched_at": raw.fundamentals_fetched_at,
         "error": None,
