@@ -20,6 +20,7 @@ from .config import Settings
 from .engine import Engine
 from .i18n import LANGS, M, msg_of, normalize_lang, render, tr
 from .market import GROUPS as MARKET_GROUPS, Market
+from .visits import Visits
 from .scheduler import Scheduler
 from .scoring import TIER_ORDER, TIERS
 
@@ -38,7 +39,7 @@ LOOPBACK = {"127.0.0.1", "::1"}
 
 
 def create_app(settings: Settings, engine: Engine | None = None, scheduler: Scheduler | None = None,
-               market: Market | None = None) -> Flask:
+               market: Market | None = None, visits: Visits | None = None) -> Flask:
     app = Flask(__name__, static_folder=None)
     app.json.sort_keys = False          # 保持档位等字典的定义顺序
     engine = engine or Engine(settings)
@@ -46,6 +47,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
     th, sc = engine.thresholds, engine.screener
     scheduler = scheduler or Scheduler(settings.slots, lambda: scanner.start(settings.scheduled_mode, trigger="scheduled"))
     market = market or Market(settings.data_dir)
+    visits = visits or Visits(settings.data_dir / "visits.json")
     if settings.scheduler_enabled:
         scheduler.start()
         market.prewarm()            # 线上第一次打开"大盘"时就不用等取数
@@ -104,6 +106,9 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
 
     @app.get("/")
     def index():
+        if request.method == "GET":
+            ip = request.headers.get("CF-Connecting-IP") or request.remote_addr or ""
+            visits.hit(ip, request.headers.get("User-Agent", ""))
         return Response(page, mimetype="text/html")
 
     @app.get("/static/<path:name>")
@@ -113,6 +118,10 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         return send_from_directory(WEB_DIR, name)
 
     # ------------------------------------------------------------ 只读 API
+    @app.get("/api/stats")
+    def site_stats():
+        return jsonify(visits.stats())
+
     @app.get("/api/health")
     def health():
         return jsonify(status="ok", version=__version__)
@@ -292,7 +301,7 @@ def create_app(settings: Settings, engine: Engine | None = None, scheduler: Sche
         return Response("\n".join(lines), mimetype="text/markdown; charset=utf-8",
                         headers={"Content-Disposition": f'attachment; filename="golden_pit_{scan["scan_id"]}.md"'})
 
-    app.extensions["golden_pit"] = {"engine": engine, "scheduler": scheduler, "market": market}
+    app.extensions["golden_pit"] = {"engine": engine, "scheduler": scheduler, "market": market, "visits": visits}
     return app
 
 

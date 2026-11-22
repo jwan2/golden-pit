@@ -332,3 +332,14 @@ table.mk-ladder td small, table.mk-eps td small { font-size: 11px; }
 .share-status { min-height: 1.5em; }
 .share-img { margin: 6px 0 4px; }
 .share-img img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-touch-callout: default; }
+
+/* ---------- 访问统计 ---------- */
+.site-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 12px; color: var(--muted); cursor: help; }
+.site-stats .st b { color: var(--text); font-weight: 700; }
+
+/* ---------- 弹窗右上角关闭 ---------- */
+.dlg-x-wrap { position: sticky; top: 0; height: 0; z-index: 5; display: flex; justify-content: flex-end; }
+.dlg-x { width: 40px; height: 40px; min-height: 40px; margin: 10px 10px 0 0; padding: 0; justify-content: center;
+  border-radius: 50%; font-size: 24px; line-height: 1; background: var(--surface); box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+dialog h2 { padding-right: 48px; }
+

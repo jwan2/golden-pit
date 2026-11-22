@@ -1504,10 +1504,38 @@ async function loadHistory(name) {
 }
 
 /** 切换语言：界面文字立即切换，结论等后端文字重新按新语言请求 */
+
+// ---------------------------------------------------------------- 访问统计 / 弹窗关闭按钮
+let siteStats = null;
+async function loadStats() {
+  try { siteStats = await api('/api/stats'); } catch { return; }
+  renderStats();
+}
+function renderStats() {
+  const s = siteStats, box = $('site-stats');
+  if (!s) return;
+  const chip = (label, v) => h('span', { class: 'st' }, label, ' ', h('b', { class: 'num' }, fmt.num(v)));
+  fill(box, chip(t('st.today_uv'), s.today.uv), chip(t('st.today_pv'), s.today.pv),
+    chip(t('st.yday'), s.yesterday.uv), chip(t('st.d7'), s.d7.uv), chip(t('st.total'), s.total.pv));
+  box.title = t('st.title', { tz: s.tz, since: s.total.since || s.today.date });
+  box.hidden = false;
+}
+
+/** 每个弹窗右上角放一个滚动时也不走的 ×；点弹窗外面的暗处也能关（扫描弹窗除外，免得误关丢了输入） */
+function setupDialogClose() {
+  for (const d of document.querySelectorAll('dialog')) {
+    d.prepend(h('div', { class: 'dlg-x-wrap' }, h('button', {
+      type: 'button', class: 'dlg-x', 'data-i18n-aria': 'close', 'aria-label': t('close'), onclick: () => d.close(),
+    }, '×')));
+    if (d.id !== 'dlg-scan') d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  }
+}
+
 async function switchLang() {
   LANG = LANG === 'zh' ? 'en' : 'zh';
   store.set('gp_lang', LANG);
   applyStaticText();
+  renderStats();
   state.config = await api('/api/config');
   renderMethod();
   const reopen = !$('drawer').hidden && $('drawer').dataset.ticker;
@@ -1516,7 +1544,9 @@ async function switchLang() {
 }
 
 async function init() {
+  setupDialogClose();
   applyStaticText();
+  loadStats();
   state.config = await api('/api/config');
   renderMethod(); setupScanDialog();
   $('btn-lang').addEventListener('click', switchLang);
