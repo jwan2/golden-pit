@@ -846,7 +846,9 @@ function drawMarket() {
   const ok = d.items.filter((it) => it.last != null);
   const sel = ok.find((it) => it.key === mk.sel[g]) || ok[0];
   fill(box, head,
-    h('p', { class: 'muted small' }, t('mk.updated', { when: fmt.when(d.updated_at) }), d.refreshing ? ` · ${t('mk.refreshing')}` : ''),
+    h('div', { class: 'mk-share-row' },
+      h('p', { class: 'muted small' }, t('mk.updated', { when: fmt.when(d.updated_at) }), d.refreshing ? ` · ${t('mk.refreshing')}` : ''),
+      sel ? h('button', { class: 'primary', onclick: (e) => openShare(e.currentTarget) }, t('mk.sh.btn')) : null),
     g === 'm7' ? m7Table(d.items, sel) : mkCards(d.items, sel),
     sel ? mkDetail(sel, g === 'us' ? d.vix : null) : null,
     h('div', { class: 'warnbox' }, '⚠ ', t('mk.caveat')),
@@ -999,7 +1001,7 @@ async function drawMkChart() {
   log ? svg('text', { x: L + 2, y: T + 10, class: 'ch-axis' }, t('mk.logscale')) : null,
   cross1, dot);
 
-  const ddTicks = linTicks(ddLo, 0, 3).filter((v) => v < 0);
+  const ddTicks = linTicks(ddLo, 0, 3).filter((v) => v < 0 && !(lastDd < -1 && Math.abs(y2(v) - y2(lastDd)) < 14));
   const under = svg('svg', { viewBox: `0 0 ${W} ${H2}`, width: W, height: H2, class: 'mk-svg', role: 'img',
     'aria-label': t('mk.aria.dd', { n: mkName(key) }) },
   ...xAxis(H2),
@@ -1133,6 +1135,352 @@ function episodesTable(it) {
           e.how === 'rebound' ? h('small', { class: 'muted' }, ` ${t('mk.e.rebound', { u: it.u })}`) : null)))))),
     eps.length > 10 ? h('button', { class: 'plain small', onclick: () => { mk.showAllEp = !mk.showAllEp; drawMarket(); } },
       t(mk.showAllEp ? 'mk.e.less' : 'mk.e.all', { n: eps.length })) : null);
+}
+
+// ---------- 分享长图：把当前标签页 + 选中的品种画成一张竖版 PNG（微信里网页常被拦，图片最稳）
+// 全部用 canvas 原生绘制，不依赖截图库；先量一遍高度，再按 2 倍分辨率真正画。
+const SH = {
+  W: 750, P: 28, S: 2,
+  bg: '#f6f5f1', card: '#ffffff', text: '#1c1b18', muted: '#6b675c', line: '#e4e1d8',
+  accent: '#8a5d00', accentBg: '#fbf0d0', down: '#b3321f', up: '#1d7a46', hit: '#fdf6e3',
+};
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+
+function shFont(ctx, size, weight = 400) {
+  const fam = getComputedStyle(document.documentElement).fontFamily || 'sans-serif';
+  ctx.font = `${weight} ${size}px ${fam}`;
+}
+
+/** 中英混排折行：汉字逐字可断，英文/数字按词断 */
+function shWrap(ctx, text, maxW) {
+  const toks = String(text).match(/[A-Za-z0-9.,%+\-–→/:'’$]+|\s+|[^\sA-Za-z0-9]/gu) || [];
+  const lines = [];
+  let cur = '';
+  for (const tk of toks) {
+    const next = cur + tk;
+    if (ctx.measureText(next).width <= maxW || !cur) { cur = next; continue; }
+    lines.push(cur.trimEnd());
+    cur = /^\s+$/.test(tk) ? '' : tk;
+  }
+  if (cur.trim()) lines.push(cur.trimEnd());
+  return lines;
+}
+
+/** 画布上的一个“排版光标”：y 往下走，所有块都调用它 */
+function shLayout(ctx, data) {
+  const { W, P } = SH;
+  const IW = W - P * 2;
+  let y = 0;
+  const color = (c) => { ctx.fillStyle = c; };
+  const text = (s, x, yy, { size = 15, weight = 400, c = SH.text, align = 'left' } = {}) => {
+    shFont(ctx, size, weight); color(c); ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(s, x, yy);
+    return ctx.measureText(s).width;
+  };
+  const para = (s, { size = 14, c = SH.text, weight = 400, lh = 1.55, x = P, w = IW } = {}) => {
+    shFont(ctx, size, weight);
+    for (const ln of shWrap(ctx, s, w)) { y += size * lh; text(ln, x, y - size * 0.35, { size, c, weight }); }
+  };
+  const rect = (x, yy, w, hh, c, r = 0) => {
+    color(c); ctx.beginPath();
+    if (r && ctx.roundRect) ctx.roundRect(x, yy, w, hh, r); else ctx.rect(x, yy, w, hh);
+    ctx.fill();
+  };
+  const hr = (yy) => { ctx.strokeStyle = SH.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P, yy + 0.5); ctx.lineTo(W - P, yy + 0.5); ctx.stroke(); };
+  const sec = (title) => { y += 30; text(title, P, y, { size: 19, weight: 700 }); y += 8; };
+  const ddC = (v) => (v == null ? SH.text : v < 0 ? SH.down : SH.text);
+  const sgC = (v) => (v == null ? SH.text : v > 0 ? SH.up : v < 0 ? SH.down : SH.text);
+
+  const { g, d, it, s } = data;
+  rect(0, 0, W, ctx.canvas.height, SH.bg);
+
+  // 抬头
+  rect(0, 0, W, 112, SH.accentBg);
+  rect(0, 108, W, 4, SH.accent);
+  const tw = text(t('mk.title'), P, 50, { size: 30, weight: 800 });
+  text(t(`mk.tab.${g}`), P + tw + 12, 50, { size: 18, weight: 600, c: SH.accent });
+  text(t('mk.sh.asof', { d: it.last_date }), P, 84, { size: 14, c: SH.muted });
+  text('stock.woodielabs.ca', W - P, 84, { size: 14, weight: 600, c: SH.accent, align: 'right' });
+  y = 112;
+
+  // 一览表
+  sec(t('mk.sh.overview'));
+  const items = d.items.filter((x) => x.last != null);
+  const cols = g === 'm7'
+    ? [[t('mk.c.name'), P + 8, 'left'], [t('mk.c.last'), P + 290, 'right'], [t('mk.c.dd'), P + 410, 'right'], [t('mk.c.mdd'), P + 560, 'right'], [t('mk.c.mdd10'), W - P - 8, 'right']]
+    : [[t('mk.sh.c.idx'), P + 8, 'left'], [t('mk.c.last'), P + 330, 'right'], [t('mk.c.dd'), P + 470, 'right'], [t('mk.c.mdd'), W - P - 8, 'right']];
+  y += 22;
+  for (const [lab, x, al] of cols) text(lab, x, y, { size: 13, c: SH.muted, align: al });
+  y += 8; hr(y);
+  for (const x of items) {
+    const on = x.key === it.key;
+    if (on) rect(P, y + 1, IW, 38, SH.hit);
+    y += 26;
+    const nm = g === 'm7' ? `${x.symbol} ${mkName(x.key)}` : mkName(x.key);
+    text(nm, cols[0][1], y, { size: 15, weight: on ? 700 : 500 });
+    text(numL(x.last), cols[1][1], y, { size: 15, align: 'right' });
+    text(pct0(x.dd_ath), cols[2][1], y, { size: 15, weight: 700, c: ddC(x.dd_ath), align: 'right' });
+    const mdd = (m) => (m ? `${pct0(m.depth)} (${m.trough_date.slice(0, 4)})` : '—');
+    text(mdd(x.mdd), cols[3][1], y, { size: 14, align: 'right' });
+    if (g === 'm7') text(mdd(x.mdd_10y), cols[4][1], y, { size: 14, align: 'right' });
+    y += 12; hr(y);
+  }
+
+  // 选中品种：关键数字
+  y += 18;
+  rect(P, y, IW, 4, SH.accent, 2);
+  y += 34;
+  text(mkName(it.key), P, y, { size: 24, weight: 800 });
+  text(`${it.symbol} · ${t('mk.since', { d: it.first_date })}`, W - P, y, { size: 13, c: SH.muted, align: 'right' });
+  const c = it.cur, m = it.mdd, m10 = it.mdd_10y;
+  const rec = (x) => (x.recover_date ? t('mk.recovered', { d: x.recover_date }) : t('mk.not_recovered'));
+  const stats = [
+    [t('mk.s.dd'), pct0(it.dd_ath), t('mk.s.dd_sub', { v: numL(it.ath), d: it.ath_date }), ddC(it.dd_ath)],
+    c.dd !== it.dd_ath ? [t('mk.s.cur'), pct0(c.dd), t('mk.s.cur_sub', { v: numL(c.peak), d: c.peak_date }), ddC(c.dd)] : null,
+    m ? [t('mk.s.mdd'), pct0(m.depth), `${m.peak_date} → ${m.trough_date}`, SH.down, rec(m)] : null,
+    m10 ? [t('mk.s.mdd10'), pct0(m10.depth), `${m10.peak_date} → ${m10.trough_date}`, SH.down, rec(m10)] : null,
+  ].filter(Boolean);
+  y += 14;
+  const bw = (IW - 12) / 2, bh = 104;
+  stats.forEach((st, i) => {
+    const bx = P + (i % 2) * (bw + 12), by = y + Math.floor(i / 2) * (bh + 12);
+    rect(bx, by, bw, bh, SH.card, 10);
+    text(st[0], bx + 14, by + 26, { size: 13, c: SH.muted });
+    text(st[1], bx + 14, by + 62, { size: 30, weight: 800, c: st[3] });
+    text(st[2], bx + 14, by + 84, { size: 12, c: SH.muted });
+    if (st[4]) text(st[4], bx + 14, by + 98, { size: 12, c: SH.muted });
+  });
+  y += Math.ceil(stats.length / 2) * (bh + 12) - 12;
+
+  // 走势 + 回撤
+  if (s) {
+    sec(`${t('mk.cap.price')} · ${t(`mk.r.${mk.range}`)}`);
+    y += 6;
+    y = shChart(ctx, s, P, y, IW, { text, rect, hr });
+  }
+
+  // 钟摆
+  sec(t('mk.g.title'));
+  para(t('mk.sh.g_intro'), { size: 13, c: SH.muted });
+  const p = it.pend || {};
+  const gauges = [
+    [t('mk.g.dd'), pct0(c.dd), p.dd_rank, p.dd_rank != null ? t('mk.g.dd_t', { r: p.dd_rank }) : t('mk.g.dd_none')],
+    p.ma200_gap != null ? [t('mk.g.ma'), pct0(p.ma200_gap), p.ma200_rank, t('mk.g.ma_t', { r: p.ma200_rank })] : null,
+    data.vix ? [t('mk.g.vix'), data.vix.last.toFixed(1), data.vix.above_rank,
+      t('mk.g.vix_t', { r: data.vix.above_rank, m: data.vix.median, x: data.vix.max, d: data.vix.max_date })] : null,
+  ].filter(Boolean);
+  for (const [lab, val, rank, txt] of gauges) {
+    y += 14;
+    shFont(ctx, 13);
+    rect(P, y, IW, 86 + shWrap(ctx, txt, IW - 28).length * 13 * 1.55, SH.card, 10);
+    y += 28;
+    text(lab, P + 14, y, { size: 15, weight: 600 });
+    text(val, W - P - 14, y, { size: 18, weight: 800, align: 'right' });
+    y += 14;
+    const tx = P + 14, tw = IW - 28;
+    rect(tx, y, tw, 10, '#eceae3', 5);
+    rect(tx, y, tw * 0.05, 10, '#f3c9c1', 5);
+    rect(tx + tw * 0.05, y, tw * 0.15, 10, '#f7e3b5', 0);
+    if (rank != null) {
+      const mx = tx + tw * Math.min(1, Math.max(0, rank / 100));
+      color(rank < 5 ? SH.down : rank < 20 ? SH.accent : SH.text);
+      ctx.beginPath(); ctx.arc(mx, y + 5, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = SH.card; ctx.lineWidth = 3; ctx.stroke();
+    }
+    y += 28;
+    text(t('mk.g.rare'), tx, y, { size: 12, c: SH.muted });
+    text(t('mk.g.common'), tx + tw, y, { size: 12, c: SH.muted, align: 'right' });
+    y += 4;
+    para(txt, { size: 13, x: P + 14, w: IW - 28 });
+    y += 12;
+  }
+
+  // 半山腰
+  const x = it.here;
+  sec(t('mk.h.title'));
+  if (!x) para(t('mk.h.shallow', { v: pct0(c.dd), t: it.t / 2 }));
+  else if (!x.done) para(t('mk.h.none', { v: pct0(x.level) }));
+  else {
+    para(t('mk.h.text', { v: pct0(x.level), n: x.n, done: x.done, fm: pct0(x.final_median), fw: pct0(x.final_worst),
+      fur: pct0(x.further_median), furw: pct0(x.further_worst) }));
+    y += 34;
+    const finals = x.finals || [];
+    const lo = Math.floor(Math.min(x.level, ...finals.map((q) => q.depth)) / 10) * 10 - 5;
+    const sx = (v) => P + 10 + (v / lo) * (IW - 20);
+    rect(P, y - 4, IW, 8, '#eceae3', 4);
+    ctx.globalAlpha = 0.55;
+    for (const q of finals) { color(SH.down); ctx.beginPath(); ctx.arc(sx(q.depth), y, 7, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    const marker = (v, lab, c2, up) => {
+      ctx.strokeStyle = c2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(sx(v), y - 16); ctx.lineTo(sx(v), y + 16); ctx.stroke();
+      text(lab, sx(v), up ? y - 22 : y + 32, { size: 12, weight: 700, c: c2, align: 'center' });
+    };
+    marker(x.level, `${t('mk.h.now')} ${pct0(x.level)}`, SH.accent, true);
+    marker(x.final_median, `${t('mk.h.med')} ${pct0(x.final_median)}`, SH.text, false);
+    y += 34;
+    for (let v = 0; v >= lo; v -= lo < -60 ? 20 : 10) text(`${v}%`, sx(v), y + 18, { size: 11, c: SH.muted, align: 'center' });
+    y += 24;
+    if (x.fwd1y.n) {
+      y += 4;
+      para(t('mk.h.fwd', { n1: x.fwd1y.n, p1: x.fwd1y.pos, m1: pct0(x.fwd1y.median), n3: x.fwd3y.n, p3: x.fwd3y.pos ?? '—', m3: pct0(x.fwd3y.median) }));
+    }
+  }
+
+  // 分档表
+  sec(t('mk.l.title'));
+  para(t('mk.l.intro'), { size: 12, c: SH.muted });
+  const lc = [[t('mk.l.c.lv'), P + 8, 'left'], [t('mk.l.c.n'), P + 168, 'right'], [t('mk.l.c.stop'), P + 268, 'right'],
+    [t('mk.l.c.further'), P + 400, 'right'], [t('mk.l.c.f1'), P + 540, 'right'], [t('mk.l.c.f3'), W - P - 8, 'right']];
+  y += 26;
+  for (const [lab, xx, al] of lc) text(lab, xx, y, { size: 12, c: SH.muted, align: al });
+  y += 8; hr(y);
+  for (const r of it.ladder) {
+    const hit = c.dd <= r.level;
+    if (hit) rect(P, y + 1, IW, 48, SH.hit);
+    y += 24;
+    text(pct0(r.level), lc[0][1], y, { size: 15, weight: 700, c: r.n ? SH.text : SH.muted });
+    if (hit) text(t('mk.l.reached'), lc[0][1] + 62, y, { size: 12, weight: 700, c: SH.accent });
+    text(String(r.n) + (r.ongoing ? '*' : ''), lc[1][1], y, { size: 15, align: 'right', c: r.n ? SH.text : SH.muted });
+    text(r.stopped_before_next == null || !r.done ? '—' : `${r.stopped_before_next}/${r.done}`, lc[2][1], y, { size: 15, align: 'right' });
+    text(r.further_median == null ? '—' : pct0(r.further_median), lc[3][1], y, { size: 15, align: 'right' });
+    if (r.further_worst != null) text(t('mk.sh.worst', { v: pct0(r.further_worst) }), lc[3][1], y + 18, { size: 11, c: SH.muted, align: 'right' });
+    for (const [f, col] of [[r.fwd1y, lc[4]], [r.fwd3y, lc[5]]]) {
+      if (!f.n) { text('—', col[1], y, { size: 15, align: 'right', c: SH.muted }); continue; }
+      text(pct0(f.median), col[1], y, { size: 15, weight: 600, c: sgC(f.median), align: 'right' });
+      text(t('mk.l.up', { p: f.pos, n: f.n }), col[1], y + 18, { size: 11, c: SH.muted, align: 'right' });
+    }
+    y += 24; hr(y);
+  }
+  if (it.ladder.some((r) => r.ongoing)) { y += 4; para(`* ${t('mk.l.incl_now')}`, { size: 12, c: SH.muted }); }
+  y += 6;
+  para(t('mk.l.howto'), { size: 13 });
+
+  // 口径 + 免责
+  y += 10;
+  para(t(it.u ? 'mk.def.cn' : 'mk.def', { t: it.t, u: it.u }), { size: 12, c: SH.muted });
+  para(t(g === 'cn' ? 'mk.src.cn' : 'mk.src.us'), { size: 12, c: SH.muted });
+  y += 16;
+  shFont(ctx, 13);
+  rect(P, y, IW, 26 + shWrap(ctx, `⚠ ${t('mk.caveat')}`, IW - 28).length * 13 * 1.55, '#fbe6d9', 10);
+  y += 14;
+  para(`⚠ ${t('mk.caveat')}`, { size: 13, x: P + 14, w: IW - 28 });
+  y += 12;
+
+  // 页脚
+  y += 22;
+  rect(0, y, W, 74, SH.text);
+  text(t('mk.sh.footer'), P, y + 32, { size: 15, weight: 700, c: '#ffffff' });
+  text('stock.woodielabs.ca', P, y + 56, { size: 14, c: '#e8b53a' });
+  text(t('mk.sh.made', { d: new Date().toLocaleDateString('sv-SE') }), W - P, y + 56, { size: 12, c: '#a09c90', align: 'right' });
+  return y + 74;
+}
+
+/** 价格线 + 水下回撤面积，和网页上的图同一个区间 */
+function shChart(ctx, s, X, y, IW, { text, hr }) {
+  const tmAll = s.tm || s.d.map((d) => Date.parse(d));
+  const n = tmAll.length, days = MK_RANGES[mk.range];
+  const from = days ? tmAll[n - 1] - days * 864e5 : -Infinity;
+  const i0 = Math.max(0, tmAll.findIndex((v) => v >= from));
+  const tm = tmAll.slice(i0), cs = s.c.slice(i0), dds = s.dd.slice(i0);
+  const R = 62, H1 = 250, H2 = 130, W = IW - R;
+  const log = !days;
+  const f = log ? Math.log : (v) => v;
+  const lo = Math.min(...cs), hi = Math.max(...cs);
+  const pad = (f(hi) - f(lo)) * 0.05 || 1, ylo = f(lo) - pad, yhi = f(hi) + pad;
+  const x = (v) => X + ((v - tm[0]) / (tm[tm.length - 1] - tm[0] || 1)) * W;
+  const y1 = (v) => y + 6 + (1 - (f(v) - ylo) / (yhi - ylo)) * (H1 - 12);
+  const ddLo = Math.min(-5, ...dds) * 1.06;
+  const top2 = y + H1 + 46;
+  const y2 = (v) => top2 + (v / ddLo) * (H2 - 6);
+  ctx.save();
+  // 价格网格
+  ctx.strokeStyle = SH.line; ctx.lineWidth = 1;
+  for (const v of (log ? logTicks(lo, hi) : linTicks(lo, hi, 4))) {
+    ctx.beginPath(); ctx.moveTo(X, y1(v)); ctx.lineTo(X + W, y1(v)); ctx.stroke();
+    text(numL(v, v < 10 ? 2 : 0), X + W + 6, y1(v) + 4, { size: 11, c: SH.muted });
+  }
+  ctx.strokeStyle = SH.text; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
+  ctx.beginPath(); cs.forEach((v, i) => (i ? ctx.lineTo(x(tm[i]), y1(v)) : ctx.moveTo(x(tm[i]), y1(v)))); ctx.stroke();
+  ctx.fillStyle = SH.accent; ctx.beginPath(); ctx.arc(x(tm[tm.length - 1]), y1(cs[cs.length - 1]), 4.5, 0, Math.PI * 2); ctx.fill();
+  if (log) text(t('mk.logscale'), X + 4, y + 18, { size: 11, c: SH.muted });
+  // 年份
+  const yA = new Date(tm[0]).getUTCFullYear(), yB = new Date(tm[tm.length - 1]).getUTCFullYear(), span = yB - yA + 1;
+  const st = span <= 2 ? 0 : [1, 2, 5, 10, 20].find((k) => span / k <= 6) || 25;
+  const xt = [];
+  if (st) for (let yy = Math.ceil(yA / st) * st; yy <= yB; yy += st) { const v = Date.UTC(yy, 0, 1); if (v >= tm[0]) xt.push([v, String(yy)]); }
+  else for (let k = 0; k <= 3; k++) { const v = tm[0] + (k / 3) * (tm[tm.length - 1] - tm[0]); xt.push([v, new Date(v).toISOString().slice(0, 7)]); }
+  for (const [v, lab] of xt) text(lab, Math.min(Math.max(x(v), X + 18), X + W - 18), y + H1 + 14, { size: 11, c: SH.muted, align: 'center' });
+  // 回撤
+  text(t('mk.cap.dd'), X, top2 - 4, { size: 12, c: SH.muted });
+  ctx.strokeStyle = SH.line; ctx.lineWidth = 1;
+  const lastDd = dds[dds.length - 1];
+  for (const v of linTicks(ddLo, 0, 3).filter((q) => q < 0 && !(lastDd < -1 && Math.abs(y2(q) - y2(lastDd)) < 16))) {
+    ctx.beginPath(); ctx.moveTo(X, y2(v)); ctx.lineTo(X + W, y2(v)); ctx.stroke();
+    text(`${Math.round(v)}%`, X + W + 6, y2(v) + 4, { size: 11, c: SH.muted });
+  }
+  ctx.beginPath(); ctx.moveTo(x(tm[0]), y2(0));
+  dds.forEach((v, i) => ctx.lineTo(x(tm[i]), y2(v)));
+  ctx.lineTo(x(tm[tm.length - 1]), y2(0)); ctx.closePath();
+  ctx.fillStyle = 'rgba(179,50,31,.16)'; ctx.fill();
+  ctx.strokeStyle = SH.down; ctx.lineWidth = 1.5;
+  ctx.beginPath(); dds.forEach((v, i) => (i ? ctx.lineTo(x(tm[i]), y2(v)) : ctx.moveTo(x(tm[i]), y2(v)))); ctx.stroke();
+  ctx.strokeStyle = SH.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X, y2(0)); ctx.lineTo(X + W, y2(0)); ctx.stroke();
+  if (lastDd < -1) {
+    ctx.strokeStyle = SH.down; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(X, y2(lastDd)); ctx.lineTo(X + W, y2(lastDd)); ctx.stroke(); ctx.setLineDash([]);
+    text(t('mk.now', { v: lastDd.toFixed(1) }), X + W + 6, y2(lastDd) + 4, { size: 12, weight: 700, c: SH.down });
+  }
+  ctx.restore();
+  hr(top2 + H2 + 6);
+  return top2 + H2 + 10;
+}
+
+async function makeShareImage() {
+  const g = mk.tab, d = mk.data[g];
+  if (!d?.items) return null;
+  const ok = d.items.filter((x) => x.last != null);
+  const it = ok.find((x) => x.key === mk.sel[g]) || ok[0];
+  if (!it) return null;
+  let s = mk.series[it.key];
+  if (!s) { try { s = mk.series[it.key] = await api(`/api/market/series/${it.key}`); } catch { s = null; } }
+  if (document.fonts?.ready) await document.fonts.ready;
+  const data = { g, d, it, s, vix: g === 'us' ? d.vix : null };
+  // 第一遍：量高度（画在 1×1 的画布上，几乎不花时间）
+  const probe = document.createElement('canvas'); probe.width = probe.height = 1;
+  const H = Math.ceil(shLayout(probe.getContext('2d'), data));
+  const cv = document.createElement('canvas');
+  cv.width = SH.W * SH.S; cv.height = H * SH.S;
+  const ctx = cv.getContext('2d');
+  ctx.scale(SH.S, SH.S);
+  shLayout(ctx, data);
+  const blob = await new Promise((res) => cv.toBlob(res, 'image/png'));
+  return { url: cv.toDataURL('image/png'), blob, name: `golden-pit-${it.key}-${it.last_date}.png` };
+}
+
+async function openShare(btn) {
+  const dlg = $('dlg-share'), body = $('share-body');
+  btn.disabled = true;
+  fill(body, h('h2', null, t('mk.sh.title')), h('p', { class: 'muted' }, t('mk.sh.making')));
+  dlg.showModal();
+  let img;
+  try { img = await makeShareImage(); } catch (e) { img = null; console.error(e); }
+  btn.disabled = false;
+  if (!img) return fill(body, h('h2', null, t('mk.sh.title')), h('p', { class: 'error' }, t('mk.sh.fail')));
+  const file = new File([img.blob], img.name, { type: 'image/png' });
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  const canCopy = !!(window.ClipboardItem && navigator.clipboard?.write);
+  const status = h('p', { class: 'small muted share-status', role: 'status' });
+  const actions = h('div', { class: 'share-actions' },
+    canShare ? h('button', { class: 'primary', onclick: async () => {
+      try { await navigator.share({ files: [file], title: t('mk.title') }); } catch (e) { if (e.name !== 'AbortError') status.textContent = t('mk.sh.fail'); }
+    } }, t('mk.sh.send')) : null,
+    canCopy && !isWeChat ? h('button', { class: canShare ? '' : 'primary', onclick: async () => {
+      try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': img.blob })]); status.textContent = t('mk.sh.copied'); } catch { status.textContent = t('mk.sh.copy_fail'); }
+    } }, t('mk.sh.copy')) : null,
+    isWeChat ? null : h('a', { class: 'btn', href: img.url, download: img.name }, t('mk.sh.save')));
+  fill(body, h('h2', null, t('mk.sh.title')),
+    h('p', { class: 'small' }, t(isWeChat ? 'mk.sh.hint_wx' : 'mk.sh.hint')),
+    actions, status,
+    h('div', { class: 'share-img' }, h('img', { src: img.url, alt: t('mk.sh.alt'), width: SH.W })));
 }
 
 // ---------------------------------------------------------------- 数据加载 / 总渲染

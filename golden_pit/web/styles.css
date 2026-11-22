@@ -325,3 +325,10 @@ table.mk-ladder td small, table.mk-eps td small { font-size: 11px; }
   table.mk-ladder td.nowrap { white-space: normal; }
   table.mk-ladder td small { display: block; }
 }
+
+/* ---------- 分享长图 ---------- */
+.mk-share-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
+.share-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.share-status { min-height: 1.5em; }
+.share-img { margin: 6px 0 4px; }
+.share-img img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; -webkit-touch-callout: default; }
